@@ -1,0 +1,9 @@
+Preliminary spec:
+
+- new microphysics implementations are added by creating a file in the format
+  `mphys_{module_name}.f90`, which is expected to a have subroutine `init`.
+
+# TODO
+
+- check that the mphys routine has the necessary components
+- move tests to separate directory

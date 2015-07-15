@@ -1,0 +1,5 @@
+*.o
+*.mod
+*.swp
+test
+microphysics_register.f90
