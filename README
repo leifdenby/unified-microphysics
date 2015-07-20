@@ -7,3 +7,17 @@ Preliminary spec:
 
 - check that the mphys routine has the necessary components
 - move tests to separate directory
+- allow setting of physical constants of hydrometeors by host model, so that the use of the same constants can be gauranteed
+
+
+# Resources
+
+On Makefiles:
+
+- http://stackoverflow.com/questions/8937500/how-to-generate-list-of-make-targets-automatically-by-globbing-subdirectories
+- http://www.gnu.org/software/make/manual/make.html#Wildcard-Function
+- http://stackoverflow.com/questions/1633527/wildcard-targets-in-a-makefile
+
+On Fortran module compilation:
+
+- http://docs.oracle.com/cd/E19205-01/819-5263/aevog/index.html
