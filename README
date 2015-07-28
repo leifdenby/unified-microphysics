@@ -9,6 +9,10 @@ Preliminary spec:
 - move tests to separate directory
 - allow setting of physical constants of hydrometeors by host model, so that the use of the same constants can be gauranteed
 
+# Ideas
+
+- instead of labelling state vector components could instead simply point to
+  variables already defined, with names that we recognise
 
 # Resources
 

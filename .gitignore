@@ -5,3 +5,4 @@ test
 microphysics_register.f90
 libunified_microphysics.a
 vendor/
+attic/

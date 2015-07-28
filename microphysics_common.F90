@@ -1,17 +1,6 @@
 module microphysics_common
 
-   ! specific heat capacity (at constant pressure) for water vapour [J/kg/K]
-   real, parameter :: cp_v = 1.0
-   ! specific heat capacity (at constant volume) for water vapour [J/kg/K]
-   real, parameter :: cv_v = 1.0
-   ! specific gas constant for water vapour [J/kg/K]
-   real, parameter :: R_v = cp_v - cv_v
-
-   ! latent heat of condensation [J/g]
-   real, parameter :: L_cond = 2500.8
-
-   ! density of water [kg/m3]
-   real, parameter :: rho_w = 1.0e3
+   implicit none
 
    contains
       function thermal_conductivity(temp)
@@ -25,6 +14,8 @@ module microphysics_common
       end function thermal_conductivity
 
       function water_vapour_diffusivity(temp, pressure)
+         use microphysics_constants, only: T0, ps0
+
          real :: water_vapour_diffusivity
          real, intent(in) :: temp, pressure
 
@@ -35,6 +26,8 @@ module microphysics_common
       end function water_vapour_diffusivity
 
       function saturation_vapour_pressure(temp)
+         use microphysics_constants, only: epsmach
+
          real :: saturation_vapour_pressure
          real, intent(in) :: temp
 
@@ -49,4 +42,21 @@ module microphysics_common
          saturation_vapour_pressure=asat*exp(expon2)
 
       end function saturation_vapour_pressure
+
+      function cv_mixture(q)
+         use microphysics_register, only: n_species, n_moments__max, cv_all
+         real, dimension(n_species, n_moments__max), intent(in) :: q
+         real :: cv_mixture
+
+         cv_mixture = sum(q(:,1)*cv_all)
+      end function cv_mixture
+
+      function cp_mixture(q)
+         use microphysics_register, only: n_species, n_moments__max, cp_all
+         real, dimension(n_species, n_moments__max), intent(in) :: q
+         real :: cp_mixture
+
+         cp_mixture = sum(q(:,1)*cp_all)
+      end function cp_mixture
+
 end module microphysics_common
