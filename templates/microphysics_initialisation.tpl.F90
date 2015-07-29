@@ -1,5 +1,5 @@
 module microphysics_initialisation
-   use microphysics_register, only: n_species, register_species
+   use microphysics_register, only: n_species, register_compressible_species, n_gases, n_solids
    use microphysics_register, only: q_flux_function
 
    implicit none
@@ -21,8 +21,8 @@ contains
          close(1)
       endif
 
-      call register_species('dry_air')
-      call register_species('water_vapour')
+      call register_compressible_species('dry_air')
+      call register_compressible_species('water_vapour')
 
       if (configuration == '') then
          print *, "Please choose a microphysics model to use. The available models are:"
@@ -32,6 +32,10 @@ contains
          print *, "Error the chosen microphysics implementation wasn't found"
          call exit(-1)
       endif
+
+      print *, "Microphysics init complete, tracers:"
+      print *, "  incompressible:", n_solids
+      print *, "  compressible:", n_gases
 
    end subroutine init
 

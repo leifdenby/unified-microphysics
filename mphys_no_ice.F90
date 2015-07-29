@@ -1,35 +1,38 @@
 !> Simple microphysics implementation which only supports the creation of cloud
 !> water from water vapour, no rain or ice-phases are included.
 module mphys_no_ice
-   use microphysics_register, only: register_species, n_species
+   use microphysics_register, only: register_incompressible_species, n_species, n_gases, n_solids
+   use microphysics_constants, only: kreal
 
    implicit none
    public init
 
    ! radwatc: Cloud particle radius (radius - water - cloud)
-   real, parameter :: radwatc = 1.0
+   real(kreal), parameter :: radwatc = 1.0
 
 
    contains
    subroutine init()
       ! register_species(name, n_moments)
       print *, "no ice init"
-      call register_species('cloud_water', 1)
+      call register_incompressible_species('cloud_water', 1)
    end subroutine
 
-   subroutine calc_dq(q, dt, temp, pressure, dq)
+   subroutine calc_dq(q_g, q_tr, dt, temp, pressure, dq_g, dq_tr)
       use microphysics_register, only: n_moments__max, idx_cwater, idx_dry_air, idx_water_vapour
 
-      real, intent(in) :: dt, temp, pressure
-      real, dimension(n_species,n_moments__max), intent(in) :: q
-      real, dimension(n_species,n_moments__max), intent(out) :: dq
+      real(kreal), intent(in) :: dt, temp, pressure
+      real(kreal), dimension(n_gases), intent(in) :: q_g
+      real(kreal), dimension(n_solids,n_moments__max), intent(in) :: q_tr
+      real(kreal), dimension(n_gases), intent(out) :: dq_g
+      real(kreal), dimension(n_solids,n_moments__max), intent(out) :: dq_tr
 
-      real :: dq_cond_evap = 0.0
+      real(kreal) :: dq_cond_evap = 0.0
 
-      dq_cond_evap = dqdt_cond_evap_cloudwater(temp, pressure, q(idx_water_vapour,1), q(idx_cwater,1))*dt
+      dq_cond_evap = dqdt_cond_evap_cloudwater(temp, pressure, q_g(idx_water_vapour), q_tr(idx_cwater,1))*dt
 
-      dq(idx_water_vapour,1) = -dq_cond_evap
-      dq(idx_cwater,1) = dq_cond_evap
+      dq_g(idx_water_vapour) = -dq_cond_evap
+      dq_tr(idx_cwater,1) = dq_cond_evap
 
       contains
 
@@ -38,22 +41,22 @@ module mphys_no_ice
             use microphysics_common, only: water_vapour_diffusivity, saturation_vapour_pressure
             use microphysics_constants, only: R_v, L_cond, rho_w, R_d
 
-            real :: dqdt_cond_evap_cloudwater
-            real, intent(in) :: temp, pressure, q_cw, q_v
+            real(kreal) :: dqdt_cond_evap_cloudwater
+            real(kreal), intent(in) :: temp, pressure, q_cw, q_v
 
-            real :: diffk, diffd, satpw
-            real :: pfak
-            real :: satww
-            real :: supsatw
-            real :: evap
-            real :: rgas
-            real :: xnwatc  ! number of cloud droplets per unit gas volume
-            real :: cp_mixture, cv_mixture
+            real(kreal) :: diffk, diffd, satpw
+            real(kreal) :: pfak
+            real(kreal) :: satww
+            real(kreal) :: supsatw
+            real(kreal) :: evap
+            real(kreal) :: rgas
+            real(kreal) :: xnwatc  ! number of cloud droplets per unit gas volume
+            real(kreal) :: cp_mixture, cv_mixture
 
             ! TODO: Move, this is a constant
-            real, parameter :: r1 = 1.0, r4 = 4.0
-            real, parameter :: xpi = 4.0/3.0*3.14
-            real, parameter :: pi = 3.14
+            real(kreal), parameter :: r1 = 1.0, r4 = 4.0
+            real(kreal), parameter :: xpi = 4.0/3.0*3.14
+            real(kreal), parameter :: pi = 3.14
 
             diffk=thermal_conductivity(temp)
             diffd=water_vapour_diffusivity(temp, pressure)
@@ -64,9 +67,9 @@ module mphys_no_ice
             !satww=satpw*pfak
 
             ! qv_sat ~ Rd/Rv * pv_sat/p
-            satww = satpw * R_d/R_v*satpw/pressure
+            satww = R_d/R_v*satpw/pressure
 
-            supsatw=q_v/satww-r1
+            supsatw=max(0.0_kreal, q_v/satww-r1)
 
             evap=supsatw/((L_cond/(R_v*temp)-r1)*L_cond/(diffk*temp) + R_v*temp/(diffd*satpw))
 
