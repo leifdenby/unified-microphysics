@@ -20,6 +20,7 @@ module mphys_no_ice
 
    subroutine calc_dq(q_g, q_tr, dt, temp, pressure, dq_g, dq_tr)
       use microphysics_register, only: n_moments__max, idx_cwater, idx_dry_air, idx_water_vapour
+      use microphysics_constants, only: L_cond
 
       real(kreal), intent(in) :: dt, temp, pressure
       real(kreal), dimension(n_gases), intent(in) :: q_g
@@ -28,13 +29,35 @@ module mphys_no_ice
       real(kreal), dimension(n_solids,n_moments__max), intent(out) :: dq_tr
 
       real(kreal) :: dq_cond_evap = 0.0
+      real(kreal) :: dq_cloudwater_formation = 0.0
+      real(kreal) :: temp_local = 0.0
 
       dq_cond_evap = dqdt_cond_evap_cloudwater(temp, pressure, q_g(idx_water_vapour), q_tr(idx_cwater,1))*dt
 
-      dq_g(idx_water_vapour) = -dq_cond_evap
-      dq_tr(idx_cwater,1) = dq_cond_evap
+      temp_local = temp + L_cond*dq_cond_evap
+
+      dq_cloudwater_formation = calc_dq_cloudwater_formation(temp_local, pressure, q_g(idx_water_vapour) - dq_cond_evap)
+
+      dq_g(idx_water_vapour) = -dq_cond_evap -dq_cloudwater_formation
+      dq_tr(idx_cwater,1) = dq_cond_evap + dq_cloudwater_formation
 
       contains
+         !> Create cloudwater by consuming excess super saturation
+         function calc_dq_cloudwater_formation(temp, pressure, q_v) result(dq_cwater)
+            use microphysics_common, only: saturation_vapour_pressure
+            use microphysics_constants, only: R_v, R_d
+
+            real(kreal), intent(in) :: temp, pressure, q_v
+            real(kreal) :: dq_cwater
+            real(kreal) :: satpw = 0.0, satww = 0.0
+
+            satpw=saturation_vapour_pressure(temp)
+
+            satww = R_d/R_v*satpw/pressure
+
+            dq_cwater=min(q_v-satww, 0.0)
+            
+         end function calc_dq_cloudwater_formation
 
          function dqdt_cond_evap_cloudwater(temp, pressure, q_v, q_cw)
             use microphysics_common, only: thermal_conductivity
@@ -69,7 +92,7 @@ module mphys_no_ice
             ! qv_sat ~ Rd/Rv * pv_sat/p
             satww = R_d/R_v*satpw/pressure
 
-            supsatw=max(0.0_kreal, q_v/satww-r1)
+            supsatw=q_v/satww-r1
 
             evap=supsatw/((L_cond/(R_v*temp)-r1)*L_cond/(diffk*temp) + R_v*temp/(diffd*satpw))
 

@@ -3,6 +3,8 @@ module microphysics_common
 
    implicit none
 
+   public thermal_conductivity
+
    contains
       function thermal_conductivity(temp)
          real(kreal) :: thermal_conductivity
@@ -27,14 +29,13 @@ module microphysics_common
       end function water_vapour_diffusivity
 
       function saturation_vapour_pressure(temp)
-         use microphysics_constants, only: epsmach
+         use microphysics_constants, only: epsmach, T0
 
          real(kreal) :: saturation_vapour_pressure
          real(kreal), intent(in) :: temp
 
          real(kreal), parameter :: awat=17.25
          real(kreal), parameter :: bwat=36.
-         real(kreal), parameter :: t0=273.15
          real(kreal), parameter :: asat=610.7
 
          real(kreal) :: expon2, satpw

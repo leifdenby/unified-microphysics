@@ -11,10 +11,11 @@ contains
       character(len=*), optional, intent(in) :: microphysics_implementation__in
       character(len=32) :: configuration = ''
 
+      namelist /microphysics_config/ configuration
+
       if (present(microphysics_implementation__in)) then
          configuration = microphysics_implementation__in
       else
-         namelist /microphysics_config/ configuration
 
          open(1, file='{microphysics_configuration_namelist_filename}',form='formatted',status='old')
          read(1, nml=microphysics_config)
