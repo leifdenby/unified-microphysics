@@ -1,4 +1,4 @@
-objects := $(patsubst %.F90,%.o, $(wildcard mphys_*.F90))
+objects := $(patsubst %.F90,%.o, $(wildcard ../models/mphys_*.F90))
 
 # Notes
 #
@@ -12,18 +12,11 @@ objects := $(patsubst %.F90,%.o, $(wildcard mphys_*.F90))
 FFLAGS :=-g -O0 -fPIC
 GC:=gfortran  # must use gfortran until I find out how to make f2py use ifort
 
-all: base
+unified_microphysics.so: microphysics_pylib.F90
+	#f2py -c -m unified_microphysics microphysics_constants.F90 microphysics_common.F90 microphysics_register.F90  #microphysics_initialisation.o $(objects)
+	f2py -L../base -lunified_microphysics -I../base --no-lower -c -m unified_microphysics microphysics_pylib.F90 skip: cv_mixture cp_mixture array_append_real array_append_int :
 
-base:
-	$(MAKE) -C src/base
-
-python: base
-	$(MAKE) -C src/wrappers python
-
-tests: base
-	$(MAKE) -C src/tests
+python: unified_microphysics.so
 
 clean:
-	$(MAKE) -C src/base clean
-	$(MAKE) -C src/wrappers clean
-
+	rm *.o *.mod lib*.a

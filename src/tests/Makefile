@@ -1,5 +1,3 @@
-objects := $(patsubst %.F90,%.o, $(wildcard mphys_*.F90))
-
 # Notes
 #
 # - `-fPIC` flag is necessary to create library that can be externally linked, from e.g. python
@@ -12,18 +10,16 @@ objects := $(patsubst %.F90,%.o, $(wildcard mphys_*.F90))
 FFLAGS :=-g -O0 -fPIC
 GC:=gfortran  # must use gfortran until I find out how to make f2py use ifort
 
-all: base
+all: python
+	#$(GC) -l unified_microphysics -L. test.F90 -o test
+	$(GC) $(FFLAGS) microphysics_tests.F90 -o microphysics_tests -lunified_microphysics -L../base -I../base
+	#gfortran mphys_dummy.o microphysics_register.o test.F90 -o test
+	./microphysics_tests
+	env PYTHONPATH=../wrappers:$(PYTHONPATH) py.test
 
-base:
-	$(MAKE) -C src/base
-
-python: base
-	$(MAKE) -C src/wrappers python
-
-tests: base
-	$(MAKE) -C src/tests
+python:
+	$(MAKE) -C ../wrappers python
 
 clean:
-	$(MAKE) -C src/base clean
-	$(MAKE) -C src/wrappers clean
-
+	rm microphysics_tests
+	rm *.o *.mod lib*.a
