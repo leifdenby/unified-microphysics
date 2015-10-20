@@ -55,6 +55,8 @@ contains
 
       call array_append_real(cp_gases, cp)
       call array_append_real(cv_gases, cv)
+
+      n_species = n_species+1
    end subroutine register_compressible_species
 
    subroutine register_incompressible_species(var_name, n_moments, cp__in, cv__in)
@@ -104,6 +106,7 @@ contains
       call array_append_real(cv_solids, cv)
       call array_append_int(moments, n_moments)
 
+      n_species = n_species+1
    end subroutine register_incompressible_species
 
    subroutine array_append_real(arr, item)

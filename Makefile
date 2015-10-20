@@ -10,7 +10,7 @@ objects := $(patsubst %.F90,%.o, $(wildcard mphys_*.F90))
 #     	$(GC) $(FFLAGS) -lunified_microphysics -L. microphysics_tests.F90 -o microphysics_tests
 
 FFLAGS :=-g -O0 -fPIC
-GC:=ifort  # must use gfortran until I find out how to make f2py use ifort
+GC:=gfortran  # must use gfortran until I find out how to make f2py use ifort
 
 all: $(objects) libunified_microphysics.a
 	echo $(objects)
@@ -35,9 +35,9 @@ $(objects): $(wildcard mphys_*.F90) microphysics_common.o microphysics_register.
 libunified_microphysics.a: $(objects) microphysics_register.o microphysics_initialisation.o
 	ar crs libunified_microphysics.a microphysics_register.o microphysics_common.o microphysics_initialisation.o $(objects)
 
-pylib:
+pylib: libunified_microphysics.a
 	#f2py -c -m unified_microphysics microphysics_constants.F90 microphysics_common.F90 microphysics_register.F90  #microphysics_initialisation.o $(objects)
-	f2py -c -m unified_microphysics microphysics_constants.F90 microphysics_common.F90 microphysics_register.F90 skip: cv_mixture cp_mixture array_append_real array_append_int :
+	f2py -L. -lunified_microphysics --no-lower -c -m unified_microphysics microphysics_constants.F90 microphysics_common.F90 microphysics_register.F90 microphysics_pylib.F90 skip: cv_mixture cp_mixture array_append_real array_append_int :
 
 test: all libunified_microphysics.a
 	#$(GC) -l unified_microphysics -L. test.F90 -o test

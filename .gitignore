@@ -2,7 +2,7 @@
 *.mod
 *.swp
 test
-microphysics_register.f90
+microphysics_initialisation.f90
 libunified_microphysics.a
 vendor/
 attic/
