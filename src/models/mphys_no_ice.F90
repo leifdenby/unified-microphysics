@@ -18,11 +18,11 @@ module mphys_no_ice
       call register_incompressible_species('cloud_water', 1)
    end subroutine
 
-   subroutine calc_dq(q_g, q_tr, dt, temp, pressure, dq_g, dq_tr)
+   subroutine calc_dqdt(q_g, q_tr, temp, pressure, dq_g, dq_tr)
       use microphysics_register, only: n_moments__max, idx_cwater, idx_dry_air, idx_water_vapour
       use microphysics_constants, only: L_cond
 
-      real(kreal), intent(in) :: dt, temp, pressure
+      real(kreal), intent(in) :: temp, pressure
       real(kreal), dimension(n_gases), intent(in) :: q_g
       real(kreal), dimension(n_solids,n_moments__max), intent(in) :: q_tr
       real(kreal), dimension(n_gases), intent(out) :: dq_g
@@ -32,7 +32,7 @@ module mphys_no_ice
       real(kreal) :: dq_cloudwater_formation = 0.0
       real(kreal) :: temp_local = 0.0
 
-      dq_cond_evap = dqdt_cond_evap_cloudwater(temp, pressure, q_g(idx_water_vapour), q_tr(idx_cwater,1))*dt
+      dq_cond_evap = dqdt_cond_evap_cloudwater(temp, pressure, q_g(idx_water_vapour), q_tr(idx_cwater,1))
 
       temp_local = temp + L_cond*dq_cond_evap
 

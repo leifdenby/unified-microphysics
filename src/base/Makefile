@@ -1,4 +1,5 @@
-objects := $(patsubst %.F90,%.o, $(wildcard ../models/mphys_*.F90))
+model_sources = $(wildcard ../models/mphys_*.F90)
+objects := $(patsubst %.F90,%.o, $(model_sources))
 
 # Notes
 #
@@ -23,7 +24,7 @@ microphysics_register.o: microphysics_constants.o
 microphysics_common.o: microphysics_register.o
 	$(GC) $(FFLAGS) -c microphysics_common.F90
 
-microphysics_initialisation.o:
+microphysics_initialisation.o: $(model_sources)
 	python generate_wrapper.py
 	$(GC) $(FFLAGS) -c microphysics_initialisation.F90
 
