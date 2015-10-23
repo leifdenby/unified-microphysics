@@ -15,17 +15,17 @@ contains
 
    end subroutine init
 
-   subroutine calc_dq(q_g, q_tr, dt, temp, pressure, dq_g, dq_tr, n_gases, n_solids, n_moments__max, error_mesg)
+   subroutine dqdt(q_g, q_tr, temp, pressure, dqdt_g, dtdq_t, n_gases, n_solids, n_moments__max, error_mesg)
       use microphysics_register, only: idx_cwater, idx_dry_air, idx_water_vapour
       use microphysics_constants, only: L_cond, kreal, kint
       !f2py raise_python_exception error_mesg
 
       integer, intent(in) :: n_gases, n_solids, n_moments__max
-      real(kreal), intent(in) :: dt, temp, pressure
+      real(kreal), intent(in) :: temp, pressure
       real(kreal), dimension(n_gases), intent(in) :: q_g
       real(kreal), dimension(n_solids,n_moments__max), intent(in) :: q_tr
-      real(kreal), dimension(n_gases), intent(out) :: dq_g
-      real(kreal), dimension(n_solids,n_moments__max), intent(out) :: dq_tr
+      real(kreal), dimension(n_gases), intent(out) :: dqdt_g
+      real(kreal), dimension(n_solids,n_moments__max), intent(out) :: dtdq_t
 
       character(len=100), intent(out) :: error_mesg
 
@@ -35,9 +35,9 @@ contains
          print *, "Error: the argument does not have the correct number of dimensions"
          print *, "   shoud have: n_solids=", mp_n_solids, ", n_gases=", mp_n_gases, ", n_moments__max=", mp_n_moments__max
       else
-         call q_flux_function(q_g, q_tr, dt, temp, pressure, dq_g, dq_tr)
+         call q_flux_function(q_g, q_tr, temp, pressure, dqdt_g, dtdq_t)
       endif
-   end subroutine calc_dq
+   end subroutine dqdt
 
    function dimensions_valid(n_gases, n_solids, n_moments__max) result(ok)
       integer, intent(in) :: n_gases, n_solids, n_moments__max
