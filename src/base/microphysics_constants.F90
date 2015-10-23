@@ -35,13 +35,30 @@ module microphysics_constants
    real(kreal), parameter :: R_v = cp_v - cv_v
    real(kreal), parameter :: R_d = cp_d - cv_d
 
-   ! latent heat of condensation [J/g]
-   real(kreal), parameter :: L_cond = 2500.8
+   ! latent heat of condensation [J/kg]
+   real(kreal), parameter :: L_cond = 2500.8*1.0e3_kreal
 
    ! density of water [kg/m3]
-   real(kreal), parameter :: rho_w = 1.0e3
+   real(kreal), parameter :: rho_w = 1.0e3_kreal
 
-   real(kreal), parameter :: T0 = 273.15
-   real(kreal), parameter :: epsmach = 1.0e-15
+   real(kreal), parameter :: T0 = 273.15_kreal
+   real(kreal), parameter :: epsmach = 1.0e-15_kreal
    real(kreal), parameter :: ps0 = 101325.0
+
+   real(kreal), parameter :: pi = 3.14
+
+   ! Create a placeholder value that we can assign to variables for initial
+   ! value, this way it will be clear if a variable hasn't been assigned
+   ! properly
+   COMPLEX, parameter :: nan = COMPLEX(0., 1.0)
+
+
+   ! For computation of saturation vapour pressure with Teten's formula
+   ! XXX: I think these are from ECHAM, but I'm not sure (Leif)
+   real(kreal), parameter :: p0vs=610.7_kreal
+   real(kreal), parameter :: a0_lq=17.25_kreal
+   real(kreal), parameter :: a1_lq=36._kreal
+   real(kreal), parameter :: a0_ice=21.875_kreal
+   real(kreal), parameter :: a1_ice=7.66_kreal
+
 end module microphysics_constants
