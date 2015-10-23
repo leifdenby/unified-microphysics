@@ -6,3 +6,4 @@ microphysics_initialisation.F90
 libunified_microphysics.a
 vendor/
 attic/
+*.nfs*
