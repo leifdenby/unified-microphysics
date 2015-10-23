@@ -15,13 +15,13 @@ GC:=gfortran  # must use gfortran until I find out how to make f2py use ifort
 
 all: $(objects) libunified_microphysics.a
 
-microphysics_constants.o: 
+microphysics_constants.o: microphysics_constants.F90
 	$(GC) $(FFLAGS) -c microphysics_constants.F90
 
-microphysics_register.o: microphysics_constants.o
+microphysics_register.o: microphysics_constants.o microphysics_register.F90
 	$(GC) $(FFLAGS) -c microphysics_register.F90
 
-microphysics_common.o: microphysics_register.o
+microphysics_common.o: microphysics_register.o microphysics_common.F90
 	$(GC) $(FFLAGS) -c microphysics_common.F90
 
 microphysics_initialisation.o: $(model_sources)
