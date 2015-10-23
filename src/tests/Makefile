@@ -15,7 +15,7 @@ all: python
 	$(GC) $(FFLAGS) microphysics_tests.F90 -o microphysics_tests -lunified_microphysics -L../base -I../base
 	#gfortran mphys_dummy.o microphysics_register.o test.F90 -o test
 	./microphysics_tests
-	env PYTHONPATH=../wrappers:$(PYTHONPATH) py.test
+	env PYTHONPATH=../wrappers:$(PYTHONPATH) py.test -v
 
 python:
 	$(MAKE) -C ../wrappers python

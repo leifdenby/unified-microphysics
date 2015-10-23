@@ -40,6 +40,7 @@ module microphysics_constants
 
    ! density of water [kg/m3]
    real(kreal), parameter :: rho_w = 1.0e3_kreal
+   real(kreal), parameter :: rho_i = 500._kreal
 
    real(kreal), parameter :: T0 = 273.15_kreal
    real(kreal), parameter :: epsmach = 1.0e-15_kreal
@@ -49,16 +50,26 @@ module microphysics_constants
 
    ! Create a placeholder value that we can assign to variables for initial
    ! value, this way it will be clear if a variable hasn't been assigned
-   ! properly
-   COMPLEX, parameter :: nan = COMPLEX(0., 1.0)
-
+   ! properly, in `microphysics_register.init` we do a =/ 0.0 to set this to nan
+   real(kreal), parameter :: nan = -0.0
 
    ! For computation of saturation vapour pressure with Teten's formula
-   ! XXX: I think these are from ECHAM, but I'm not sure (Leif)
+   ! TODO: I think these are from ECHAM, but I'm not sure (Leif)
    real(kreal), parameter :: p0vs=610.7_kreal
    real(kreal), parameter :: a0_lq=17.25_kreal
    real(kreal), parameter :: a1_lq=36._kreal
    real(kreal), parameter :: a0_ice=21.875_kreal
    real(kreal), parameter :: a1_ice=7.66_kreal
+
+   ! For computation of thermal conductivity
+   ! Coefficients from ATHAM sourcecode, verified against tabulated values in
+   ! Rogers & Yau
+   real(kreal), parameter :: a_K=8.0e-5_kreal
+   real(kreal), parameter :: b_K=2.4e-2_kreal
+
+   ! For computation of diffusion coefficient of water vapour in "air"
+   ! Constants are based on powerlaw fit to data in Rogers & Yau
+   real(kreal), parameter :: a_D=2.20e-5_kreal
+   real(kreal), parameter :: b_D=1.92_kreal
 
 end module microphysics_constants

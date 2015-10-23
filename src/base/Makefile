@@ -29,7 +29,7 @@ microphysics_initialisation.o: $(model_sources)
 	$(GC) $(FFLAGS) -c microphysics_initialisation.F90
 
 # module for each microphysics implementation
-$(objects): $(wildcard mphys_*.F90) microphysics_common.o microphysics_register.o
+$(objects): $(wildcard mphys_*.F90) microphysics_common.o microphysics_register.o microphysics_constants.o
 	$(GC) $(FFLAGS) -c $(patsubst %.o, %.F90, $@)
 
 libunified_microphysics.a: $(objects) microphysics_register.o microphysics_initialisation.o

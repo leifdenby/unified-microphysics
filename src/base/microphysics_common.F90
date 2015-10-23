@@ -7,25 +7,22 @@ module microphysics_common
 
    contains
       function thermal_conductivity(temp)
+         use microphysics_constants, only: T0, a_K, b_K
+
          real(kreal) :: thermal_conductivity
          real(kreal), intent(in) :: temp
 
-         real(kreal), parameter :: adiffk=2.4e-2
-         real(kreal), parameter :: bdiffk=8.e-5
-
-         thermal_conductivity=adiffk+bdiffk*temp    
+         thermal_conductivity=a_K*(temp-T0) + b_K
       end function thermal_conductivity
 
       function water_vapour_diffusivity(temp, pressure)
-         use microphysics_constants, only: T0, ps0
+         use microphysics_constants, only: T0, ps0, a_D, b_D
 
          real(kreal) :: water_vapour_diffusivity
          real(kreal), intent(in) :: temp, pressure
 
-         real(kreal), parameter :: adiffd=2.11e-5
-         real(kreal), parameter :: bdiffd=1.94
-
-         water_vapour_diffusivity=adiffd*(temp/T0)**bdiffd*ps0/(pressure)
+         ! The tabulated values are in reference to P=10000. Pa
+         water_vapour_diffusivity=a_D*(temp/T0)**b_D*10000./(pressure)
       end function water_vapour_diffusivity
 
       function saturation_vapour_pressure(temp)
