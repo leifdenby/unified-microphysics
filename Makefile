@@ -15,15 +15,17 @@ FC?=gfortran  # must use gfortran until I find out how to make f2py use ifort
 all: base
 
 base:
-	$(MAKE) -C src/base
+	FC=$(FC) $(MAKE) -C src/base
 
 python: base
-	$(MAKE) -C src/wrappers python
+	FC=$(FC) $(MAKE) -C src/wrappers python
 
 tests: base
-	$(MAKE) -C src/tests
+	FC=$(FC) $(MAKE) -C src/tests
 
 clean:
-	$(MAKE) -C src/base clean
-	$(MAKE) -C src/wrappers clean
+	FC=$(FC) $(MAKE) -C src/base clean
+	FC=$(FC) $(MAKE) -C src/wrappers clean
+	rm -f lib/*
+	rm -f include/*
 

@@ -44,5 +44,5 @@ test: all libunified_microphysics.a
 	./microphysics_tests
 
 clean:
-	rm *.o *.mod lib*.a
-	rm microphysics_initialisation.F90
+	rm -f *.o *.mod lib*.a
+	rm -f microphysics_initialisation.F90

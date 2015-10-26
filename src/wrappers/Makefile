@@ -26,4 +26,4 @@ unified_microphysics_fortran.so: microphysics_pylib.F90 $(models) $(base_src)
 python: unified_microphysics_fortran.so
 
 clean:
-	rm *.o *.mod lib*.a *.so
+	rm -f *.o *.mod lib*.a *.so
