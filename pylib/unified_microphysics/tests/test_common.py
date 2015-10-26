@@ -2,11 +2,11 @@
 
 import pyclouds.parameterisations
 import pyclouds.common
-import unified_microphysics
+import unified_microphysics.fortran as um_fortran
 
 # dictionary-based mapping of constants in fortran code to easy testing with
 # equations written in python
-um_constants_fortran = unified_microphysics.microphysics_constants
+um_constants_fortran = um_fortran.microphysics_constants
 um_constants = {
     'cp_d': um_constants_fortran.cp_d,
     'cv_d': um_constants_fortran.cv_d,
@@ -35,7 +35,7 @@ um_constants = {
 assert_close = lambda v1, v2: abs(v2 - v1)/v1 < 0.05
 
 def test_pvsat():
-    f1 = unified_microphysics.microphysics_common.saturation_vapour_pressure
+    f1 = um_fortran.microphysics_common.saturation_vapour_pressure
 
     pyclouds_parameterisations = pyclouds.parameterisations.ParametersationsWithSpecificConstants(constants=um_constants)
     f2 = pyclouds_parameterisations.pv_sat
@@ -51,8 +51,7 @@ def test_pvsat():
     assert_close(f1(250.), f3(250.))
 
 def test_thermal_conductivity_parameterisation():
-    f1 = unified_microphysics.microphysics_common.thermal_conductivity
-
+    f1 = um_fortran.microphysics_common.thermal_conductivity 
     pyclouds_parameterisations = pyclouds.parameterisations.ParametersationsWithSpecificConstants(constants=um_constants)
     f2 = pyclouds_parameterisations.Ka
 
@@ -65,3 +64,19 @@ def test_thermal_conductivity_parameterisation():
     assert_close(f1(300.), f3(300.))
     assert_close(f1(273.), f3(273.))
     assert_close(f1(250.), f3(250.))
+
+def test_water_vapour_diffusion_parameterisation():
+    p0 = 101325.0
+    f1 = um_fortran.microphysics_common.water_vapour_diffusivity
+    pyclouds_parameterisations = pyclouds.parameterisations.ParametersationsWithSpecificConstants(constants=um_constants)
+    f2 = pyclouds_parameterisations.Dv
+
+    assert f1(300., p0) == f2(300., p0)
+    assert f1(273., p0) == f2(273., p0)
+    assert f1(250., p0) == f2(250., p0)
+
+    # use constants defined in unified microphysics code
+    f3 = pyclouds.parameterisations.Dv
+    assert_close(f1(300., p0), f3(300., p0))
+    assert_close(f1(273., p0), f3(273., p0))
+    assert_close(f1(250., p0), f3(250., p0))

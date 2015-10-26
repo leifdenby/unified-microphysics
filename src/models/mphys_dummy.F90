@@ -13,9 +13,10 @@ module mphys_dummy
 
    contains
    subroutine init()
-      ! register_species(name, n_moments)
-      print *, "no ice init"
-      ! call register_incompressible_species('cloud_water', 1)
+      call register_incompressible_species('cloud_water', 1)
+      call register_incompressible_species('rain', 1)
+      call register_incompressible_species('cloud_ice', 1)
+      call register_incompressible_species('graupel', 1)
    end subroutine
 
    subroutine calc_dqdt(q_g, q_tr, temp, pressure, dq_g, dq_tr)

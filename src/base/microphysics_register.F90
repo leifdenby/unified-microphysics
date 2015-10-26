@@ -23,6 +23,19 @@ module microphysics_register
    procedure(), pointer :: q_flux_function => null()
 
 contains
+   subroutine reset()
+      n_species = 0
+      n_gases = 0
+      n_solids = 0
+      n_moments__max = 0
+      idx_cwater = 0
+      idx_rain = 0
+      idx_cice = 0
+      idx_graupel = 0
+      idx_dry_air = 0
+      idx_water_vapour = 0
+   end subroutine reset
+
    subroutine register_compressible_species(var_name, cp__in, cv__in)
       use microphysics_constants, only: cp_d, cv_d, cp_v, cv_v
       character(len=*), intent(in) :: var_name

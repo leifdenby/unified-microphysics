@@ -1,6 +1,6 @@
 module microphysics_initialisation
    use microphysics_register, only: n_species, register_compressible_species, n_gases, n_solids
-   use microphysics_register, only: q_flux_function
+   use microphysics_register, only: q_flux_function, reset_register => reset
 
    implicit none
 
@@ -21,6 +21,8 @@ contains
          read(1, nml=microphysics_config)
          close(1)
       endif
+
+      call reset_register()
 
       call register_compressible_species('dry_air')
       call register_compressible_species('water_vapour')

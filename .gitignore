@@ -7,3 +7,4 @@ libunified_microphysics.a
 vendor/
 attic/
 *.nfs*
+.cache/

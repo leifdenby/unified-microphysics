@@ -24,7 +24,7 @@ microphysics_register.o: microphysics_constants.o microphysics_register.F90
 microphysics_common.o: microphysics_register.o microphysics_common.F90
 	$(GC) $(FFLAGS) -c microphysics_common.F90
 
-microphysics_initialisation.o: $(model_sources)
+microphysics_initialisation.o: $(model_sources) microphysics_initialisation.tpl.F90
 	python generate_wrapper.py
 	$(GC) $(FFLAGS) -c microphysics_initialisation.F90
 

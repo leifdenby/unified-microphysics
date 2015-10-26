@@ -47,8 +47,8 @@ module mphys_no_ice
       rho_g = rho_f(qd, qv, 0.0_kreal, 0.0_kreal, pressure, temp)
 
       ! compute time derivatives for each process
-      dqrdt_autoconv = 0*dqr_dt__autoconversion(ql, qg, rho_g)
-      dqrdt_accre    = 0*dqr_dt__accretion(ql, qg, rho_g, qr)
+      dqrdt_autoconv = dqr_dt__autoconversion(ql, qg, rho_g)
+      dqrdt_accre    = dqr_dt__accretion(ql, qg, rho_g, qr)
       dqldt_condevap = dql_dt__condensation_evaporation(rho, rho_g, qv, ql, temp, pressure)
 
       ! combine to create time derivatives for species
@@ -61,13 +61,13 @@ module mphys_no_ice
    end subroutine
 
 
-   function rho_f(qd, qv, ql, qr, p, T) result(rho)
+   function rho_f(qd, qv, ql, qr, p, temp) result(rho)
       use microphysics_constants, only: R_v, R_d, rho_l => rho_w
 
-      real(kreal), intent(in) :: qd, qv, ql, qr, p, T
+      real(kreal), intent(in) :: qd, qv, ql, qr, p, temp
       real(kreal) :: rho, rho_inv = nan
 
-      rho_inv = (qd*R_d + qv*R_v)*T/p + (ql+qr)/rho_l
+      rho_inv = (qd*R_d + qv*R_v)*temp/p + (ql+qr)/rho_l
 
       rho = 1.0/rho_inv
    end function rho_f
@@ -130,7 +130,7 @@ module mphys_no_ice
       pv_sat = pv_sat_f(T)
       qv_sat = qv_sat_f(T, p)
 
-      if (ql == 0.0) then
+      if (ql == 0.0_kreal) then
          r_c = r0
       else
          r_c = (ql*rho/(r4_3*pi*N0*rho_l))**r1_3
@@ -157,6 +157,6 @@ module mphys_no_ice
       Fd = R_v*T/(pv_sat*Dv)
 
       ! compute rate of change of condensate from diffusion
-      dql_dt__condensation_evaporation = 4*pi*1./rho*Nc*r_c*(Sw - 1.0)/(Fk + Fd)
+      dql_dt__condensation_evaporation = 4.*pi*1./rho*Nc*r_c*(Sw - 1.0)/(Fk + Fd)
    end function dql_dt__condensation_evaporation
 end module mphys_no_ice

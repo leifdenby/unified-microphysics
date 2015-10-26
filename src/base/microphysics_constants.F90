@@ -46,7 +46,7 @@ module microphysics_constants
    real(kreal), parameter :: epsmach = 1.0e-15_kreal
    real(kreal), parameter :: ps0 = 101325.0
 
-   real(kreal), parameter :: pi = 3.14
+   real(kreal), parameter :: pi = 3.141592653589793238462643_kreal
 
    ! Create a placeholder value that we can assign to variables for initial
    ! value, this way it will be clear if a variable hasn't been assigned
