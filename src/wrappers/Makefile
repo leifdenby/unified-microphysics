@@ -13,7 +13,7 @@ base_src = ../base/microphysics_constants.F90 ../base/microphysics_common.F90 ..
 #     	$(GC) $(FFLAGS) -lunified_microphysics -L. microphysics_tests.F90 -o microphysics_tests
 
 FFLAGS :=-g -O0 -fPIC
-GC:=gfortran  # must use gfortran until I find out how to make f2py use ifort
+FC?=gfortran  # must use gfortran until I find out how to make f2py use ifort
 
 unified_microphysics_fortran.so: microphysics_pylib.F90 $(models) $(base_src)
 	#f2py -c -m unified_microphysics microphysics_constants.F90 microphysics_common.F90 microphysics_register.F90  #microphysics_initialisation.o $(objects)

@@ -10,7 +10,7 @@ objects := $(patsubst %.F90,%.o, $(wildcard mphys_*.F90))
 #     	$(GC) $(FFLAGS) -lunified_microphysics -L. microphysics_tests.F90 -o microphysics_tests
 
 FFLAGS :=-g -O0 -fPIC
-GC:=gfortran  # must use gfortran until I find out how to make f2py use ifort
+FC?=gfortran  # must use gfortran until I find out how to make f2py use ifort
 
 all: base
 
