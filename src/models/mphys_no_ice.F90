@@ -17,7 +17,7 @@ module mphys_no_ice
    end subroutine
 
    subroutine calc_dqdt(q_g, q_tr, temp, pressure, dqdt_g, dqdt_tr, dTdt)
-      use microphysics_register, only: n_moments__max, idx_cwater, idx_dry_air, idx_water_vapour, idx_rain
+      use microphysics_register, only: n_moments__max, idx_cwater, idx_water_vapour, idx_rain
       use microphysics_constants, only: L_v => L_cond
       use microphysics_common, only: cp_mixture
 
@@ -39,7 +39,7 @@ module mphys_no_ice
       ql = q_tr(idx_cwater, 1)
       qr = q_tr(idx_rain, 1)
       qv = q_g(idx_water_vapour)
-      qd = q_g(idx_dry_air)
+      qd = 1.0 - sum(q_g) - sum(q_tr(:,1))
       qg = qv + qd
 
       ! compute gas and mixture density using equation of state

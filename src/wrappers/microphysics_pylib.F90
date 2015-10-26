@@ -16,7 +16,7 @@ contains
    end subroutine init
 
    subroutine dqdt(q_g, q_tr, temp, pressure, dqdt_g, dtdq_t, dTdt, n_gases, n_solids, n_moments__max, error_mesg)
-      use microphysics_register, only: idx_cwater, idx_dry_air, idx_water_vapour
+      use microphysics_register, only: idx_cwater, idx_water_vapour
       use microphysics_constants, only: L_cond, kreal, kint
       !f2py raise_python_exception error_mesg
 

@@ -14,10 +14,10 @@ pylib = um_fortran.microphysics_pylib
 def test_init():
     pylib.init('dummy')
 
-    assert um_register.n_gases == 2
+    assert um_register.n_gases == 1
     assert um_register.n_solids == 4
 
     pylib.init('dummy')
 
-    assert um_register.n_gases == 2
+    assert um_register.n_gases == 1
     assert um_register.n_solids == 4

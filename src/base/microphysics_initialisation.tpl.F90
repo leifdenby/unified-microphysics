@@ -24,7 +24,6 @@ contains
 
       call reset_register()
 
-      call register_compressible_species('dry_air')
       call register_compressible_species('water_vapour')
 
       if (configuration == '') then

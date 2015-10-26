@@ -15,7 +15,7 @@ um_common = um_fortran.microphysics_common
 def test_init():
     pylib.init('no_ice')
 
-    assert um_register.n_gases == 2
+    assert um_register.n_gases == 1
     assert um_register.n_solids == 2
 
 def test_state_mapping():
@@ -55,7 +55,6 @@ def test_state_mapping2():
     if um_register.idx_cice != 0:
         q_tr[um_register.idx_cice-1,0] = random.random()
 
-    q_g[um_register.idx_dry_air-1] = 1.0 - np.sum(q_g) - np.sum(q_tr[:,0])
     T = random.random()
 
     F = state_mapping.um_pycloud(q_g=q_g, q_tr=q_tr, T=T)
@@ -138,7 +137,7 @@ def _test_full():
 
 def test_equation_of_state():
     pylib.init('no_ice')
-    assert um_register.n_gases == 2
+    assert um_register.n_gases == 1
     assert um_register.n_solids == 2
 
     mu_model = um_fortran.mphys_no_ice

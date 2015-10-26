@@ -17,7 +17,7 @@ module microphysics_register
    integer :: n_moments__max = -1
 
    ! variables for indexing into state array
-   integer :: idx_cwater=0, idx_rain=0, idx_cice=0, idx_graupel=0, idx_dry_air=0, idx_water_vapour=0
+   integer :: idx_cwater=0, idx_rain=0, idx_cice=0, idx_graupel=0, idx_water_vapour=0
 
    ! pointers to subroutines used in microphysics calculation
    procedure(), pointer :: q_flux_function => null()
@@ -32,7 +32,6 @@ contains
       idx_rain = 0
       idx_cice = 0
       idx_graupel = 0
-      idx_dry_air = 0
       idx_water_vapour = 0
    end subroutine reset
 
@@ -47,11 +46,7 @@ contains
       n_gases = n_gases+1
       species_idx = n_gases
 
-      if (trim(var_name) == 'dry_air') then
-         idx_dry_air = species_idx
-         cp = cp_d
-         cv = cv_d
-      else if (trim(var_name) == 'water_vapour') then
+      if (trim(var_name) == 'water_vapour') then
          idx_water_vapour = species_idx
          cp = cp_v
          cv = cv_v

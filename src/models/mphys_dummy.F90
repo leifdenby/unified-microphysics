@@ -20,7 +20,7 @@ module mphys_dummy
    end subroutine
 
    subroutine calc_dqdt(q_g, q_tr, temp, pressure, dq_g, dq_tr)
-      use microphysics_register, only: n_moments__max, idx_cwater, idx_dry_air, idx_water_vapour
+      use microphysics_register, only: n_moments__max, idx_cwater, idx_water_vapour
       use microphysics_constants, only: L_cond
 
       real(kreal), intent(in) :: temp, pressure
