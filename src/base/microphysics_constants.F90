@@ -57,9 +57,9 @@ module microphysics_constants
    ! TODO: I think these are from ECHAM, but I'm not sure (Leif)
    real(kreal), parameter :: p0vs=610.7_kreal
    real(kreal), parameter :: a0_lq=17.25_kreal
-   real(kreal), parameter :: a1_lq=36._kreal
+   real(kreal), parameter :: a1_lq=-36._kreal
    real(kreal), parameter :: a0_ice=21.875_kreal
-   real(kreal), parameter :: a1_ice=7.66_kreal
+   real(kreal), parameter :: a1_ice=-7.66_kreal
 
    ! For computation of thermal conductivity
    ! Coefficients from ATHAM sourcecode, verified against tabulated values in

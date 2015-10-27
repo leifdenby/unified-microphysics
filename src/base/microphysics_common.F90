@@ -57,20 +57,26 @@ module microphysics_common
 
       function cv_mixture(q_gases, q_solids)
          use microphysics_register, only: n_gases, n_solids, n_moments__max, cv_solids, cv_gases
+         use microphysics_constants, only: cv_d
          real(kreal), dimension(n_solids, n_moments__max), intent(in) :: q_solids
          real(kreal), dimension(n_gases), intent(in) :: q_gases
-         real(kreal) :: cv_mixture
+         real(kreal) :: cv_mixture, q_d
 
-         cv_mixture = sum(q_solids(:,1)*cv_solids) + sum(q_gases*cv_gases)
+         q_d = 1.0 - sum(q_solids(:,1)) - sum(q_gases(:))
+
+         cv_mixture = cv_d*q_d + sum(q_solids(:,1)*cv_solids) + sum(q_gases*cv_gases)
       end function cv_mixture
 
       function cp_mixture(q_gases, q_solids)
          use microphysics_register, only: n_gases, n_solids, n_moments__max, cp_solids, cp_gases
+         use microphysics_constants, only: cp_d
          real(kreal), dimension(n_solids, n_moments__max), intent(in) :: q_solids
          real(kreal), dimension(n_gases), intent(in) :: q_gases
-         real(kreal) :: cp_mixture
+         real(kreal) :: cp_mixture, q_d
 
-         cp_mixture = sum(q_solids(:,1)*cp_solids) + sum(q_gases*cp_gases)
+         q_d = 1.0 - sum(q_solids(:,1)) - sum(q_gases(:))
+
+         cp_mixture = cp_d*q_d + sum(q_solids(:,1)*cp_solids) + sum(q_gases*cp_gases)
       end function cp_mixture
 
 end module microphysics_common
