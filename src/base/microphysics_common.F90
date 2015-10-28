@@ -55,28 +55,26 @@ module microphysics_common
       end function saturation_vapour_concentration
 
 
-      function cv_mixture(q_gases, q_solids)
-         use microphysics_register, only: n_gases, n_solids, n_moments__max, cv_solids, cv_gases
+      function cv_mixture(y)
+         use microphysics_register, only: n_variables, cv_species, q_species_flag
          use microphysics_constants, only: cv_d
-         real(kreal), dimension(n_solids, n_moments__max), intent(in) :: q_solids
-         real(kreal), dimension(n_gases), intent(in) :: q_gases
+         real(kreal), dimension(n_variables), intent(in) :: y
          real(kreal) :: cv_mixture, q_d
 
-         q_d = 1.0 - sum(q_solids(:,1)) - sum(q_gases(:))
+         q_d = 1.0 - sum(y*q_species_flag)
 
-         cv_mixture = cv_d*q_d + sum(q_solids(:,1)*cv_solids) + sum(q_gases*cv_gases)
+         cv_mixture = cv_d*q_d + sum(y*cv_species)
       end function cv_mixture
 
-      function cp_mixture(q_gases, q_solids)
-         use microphysics_register, only: n_gases, n_solids, n_moments__max, cp_solids, cp_gases
+      function cp_mixture(y)
+         use microphysics_register, only: n_variables, cp_species, q_species_flag
          use microphysics_constants, only: cp_d
-         real(kreal), dimension(n_solids, n_moments__max), intent(in) :: q_solids
-         real(kreal), dimension(n_gases), intent(in) :: q_gases
+         real(kreal), dimension(n_variables), intent(in) :: y
          real(kreal) :: cp_mixture, q_d
 
-         q_d = 1.0 - sum(q_solids(:,1)) - sum(q_gases(:))
+         q_d = 1.0 - sum(y*q_species_flag)
 
-         cp_mixture = cp_d*q_d + sum(q_solids(:,1)*cp_solids) + sum(q_gases*cp_gases)
+         cp_mixture = cp_d*q_d + sum(y*cp_species)
       end function cp_mixture
 
 end module microphysics_common

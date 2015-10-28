@@ -11,12 +11,13 @@ um_fortran = unified_microphysics.fortran
 pylib = um_fortran.microphysics_pylib
 um_register = um_fortran.microphysics_register
 um_common = um_fortran.microphysics_common
+um_integration = um_fortran.microphysics_integration
 
 def test_init():
     pylib.init('no_ice')
 
-    assert um_register.n_gases == 1
-    assert um_register.n_solids == 2
+    assert um_register.n_compressible_species == 1
+    assert um_register.n_incompressible_species == 2
 
 def test_state_mapping():
     pylib.init('no_ice')
@@ -33,36 +34,37 @@ def test_state_mapping():
         F[Var.q_i] = random.random()
     F[Var.T] = random.random()
 
-    q_g, q_tr, T = state_mapping.pycloud_um(F=F)
-    F2 = state_mapping.um_pycloud(q_g=q_g, q_tr=q_tr, T=T)
+    p = random.random()
+
+    y = state_mapping.pycloud_um(F=F, p=p)
+    F2, p2 = state_mapping.um_pycloud(y=y)
 
     assert np.all(F == F2)
+    assert p == p2
 
 def test_state_mapping2():
     pylib.init('no_ice')
     state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
 
-    q_g = np.zeros((um_register.n_gases))
-    q_tr = np.zeros((um_register.n_solids, um_register.n_moments__max))
+    y = np.zeros((um_register.n_variables))
 
     # fortran indexing starts at 1
     if um_register.idx_water_vapour != 0:
-        q_g[um_register.idx_water_vapour-1] = random.random()
+        y[um_register.idx_water_vapour-1] = random.random()
     if um_register.idx_cwater != 0:
-        q_tr[um_register.idx_cwater-1,0] = random.random()
+        y[um_register.idx_cwater-1] = random.random()
     if um_register.idx_rain != 0:
-        q_tr[um_register.idx_rain-1,0] = random.random()
+        y[um_register.idx_rain-1] = random.random()
     if um_register.idx_cice != 0:
-        q_tr[um_register.idx_cice-1,0] = random.random()
+        y[um_register.idx_cice-1] = random.random()
 
-    T = random.random()
+    y[um_register.idx_temp-1] = random.random()
+    y[um_register.idx_pressure-1] = random.random()
 
-    F = state_mapping.um_pycloud(q_g=q_g, q_tr=q_tr, T=T)
-    q_g2, q_tr2, T2 = state_mapping.pycloud_um(F=F)
+    F, p2 = state_mapping.um_pycloud(y=y)
+    y2 = state_mapping.pycloud_um(F=F, p=p2)
 
-    assert np.all(q_g == q_g2)
-    assert np.all(q_tr == q_tr2)
-    assert T == T2
+    assert np.all(y == y2)
 
 
 def test_cond_evap():
@@ -120,10 +122,10 @@ def _test_full():
     F[Var.T] = 285.0
     p = 101325.0
 
-    q_g, q_tr, T = state_mapping.pycloud_um(F=F)
+    q_g, y, T = state_mapping.pycloud_um(F=F)
 
-    dqdt_g, dqdt_tr, dTdt, _ = pylib.dqdt(q_g=q_g, q_tr=q_tr, temp=T, pressure=p)
-    dFdz1 = state_mapping.um_pycloud(q_g=dqdt_g, q_tr=dqdt_tr, T=dTdt)
+    dqdt_g, dqdt_tr, dTdt, _ = pylib.dqdt(q_g=q_g, y=y, temp=T, pressure=p)
+    dFdz1 = state_mapping.um_pycloud(q_g=dqdt_g, y=dqdt_tr, T=dTdt)
 
     pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
 
@@ -137,8 +139,8 @@ def _test_full():
 
 def test_equation_of_state():
     pylib.init('no_ice')
-    assert um_register.n_gases == 1
-    assert um_register.n_solids == 2
+    assert um_register.n_compressible_species == 1
+    assert um_register.n_incompressible_species == 2
 
     mu_model = um_fortran.mphys_no_ice
     mu_common = um_fortran.microphysics_common
@@ -176,6 +178,26 @@ def test_equation_of_state():
     rho_2 = pyclouds_model.calc_mixture_density(qd=qd, qv=qv, ql=ql, qi=qi, qr=qr, p=p, T=T)
 
     assert abs(rho_1 - rho_2) < 1.0e-16
+
+
+def test_integration():
+    pylib.init('no_ice')
+    assert um_register.n_compressible_species == 1
+    assert um_register.n_incompressible_species == 2
+
+    mu_model = um_fortran.mphys_no_ice
+    mu_common = um_fortran.microphysics_common
+
+    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+
+    F = np.zeros((Var.NUM))
+    F[Var.q_v] = 0.01
+    F[Var.T] = 300.
+    p = 101325.0
+
+    y = state_mapping.pycloud_um(F=F, p=p)
+
+    dy, _ = um_integration.calc_dy_with_message(y, dt=1.0)
 
 
 if __name__ == "__main__":

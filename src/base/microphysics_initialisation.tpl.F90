@@ -1,5 +1,5 @@
 module microphysics_initialisation
-   use microphysics_register, only: n_species, register_compressible_species, n_gases, n_solids
+   use microphysics_register, only: register_variable, n_compressible_species, n_incompressible_species
    use microphysics_register, only: q_flux_function, reset_register => reset
 
    implicit none
@@ -24,7 +24,9 @@ contains
 
       call reset_register()
 
-      call register_compressible_species('water_vapour')
+      call register_variable('water_vapour')
+      call register_variable('temperature')
+      call register_variable('pressure')
 
       if (configuration == '') then
          print *, "Please choose a microphysics model to use. The available models are:"
@@ -36,8 +38,8 @@ contains
       endif
 
       print *, "Microphysics init complete, tracers:"
-      print *, "  incompressible:", n_solids
-      print *, "  compressible:", n_gases
+      print *, "  incompressible:", n_incompressible_species
+      print *, "  compressible:", n_compressible_species
 
    end subroutine init
 

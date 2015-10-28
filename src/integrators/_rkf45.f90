@@ -240,7 +240,7 @@ module rungekuttafehlberg
       integer  k,maxnfe,mflag
 !
       double precision  dabs,dmax1,dmin1,dsign
-      double precision, parameter :: d1mach = 1.0e-16
+      double precision, parameter :: d1mach = 1.0e-10
 !
 !  remin is the minimum acceptable value of relerr.  attempts
 !  to obtain higher accuracy with this subroutine are usually

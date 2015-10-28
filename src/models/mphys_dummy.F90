@@ -2,7 +2,7 @@
 !> implemented
 
 module mphys_dummy
-   use microphysics_register, only: register_incompressible_species, n_species, n_gases, n_solids
+   use microphysics_register, only: register_variable
    use microphysics_constants, only: kreal
 
    implicit none
@@ -13,21 +13,19 @@ module mphys_dummy
 
    contains
    subroutine init()
-      call register_incompressible_species('cloud_water', 1)
-      call register_incompressible_species('rain', 1)
-      call register_incompressible_species('cloud_ice', 1)
-      call register_incompressible_species('graupel', 1)
+      call register_variable('cloud_water', 1)
+      call register_variable('rain', 1)
+      call register_variable('cloud_ice', 1)
+      call register_variable('graupel', 1)
    end subroutine
 
-   subroutine calc_dqdt(q_g, q_tr, temp, pressure, dq_g, dq_tr)
-      use microphysics_register, only: n_moments__max, idx_cwater, idx_water_vapour
+   subroutine calc_dydt(y, n_variables, dydt)
+      use microphysics_register, only: idx_cwater, idx_water_vapour
       use microphysics_constants, only: L_cond
 
-      real(kreal), intent(in) :: temp, pressure
-      real(kreal), dimension(n_gases), intent(in) :: q_g
-      real(kreal), dimension(n_solids,n_moments__max), intent(in) :: q_tr
-      real(kreal), dimension(n_gases), intent(out) :: dq_g
-      real(kreal), dimension(n_solids,n_moments__max), intent(out) :: dq_tr
+      integer, intent(in) :: n_variables
+      real(kreal), dimension(n_variables), intent(in) :: y
+      real(kreal), dimension(n_variables), intent(out) :: dydt
 
    end subroutine
 end module mphys_dummy

@@ -2,7 +2,7 @@
 !> water from water vapour, no rain or ice-phases are included.
 
 module mphys_no_ice
-   use microphysics_register, only: register_incompressible_species, n_species, n_gases, n_solids
+   use microphysics_register, only: register_variable
    use microphysics_constants, only: kreal, nan
 
    implicit none
@@ -10,36 +10,36 @@ module mphys_no_ice
 
    contains
    subroutine init()
-      ! register_species(name, n_moments)
+      ! register_variable(name, n_moments)
       print *, "no ice init"
-      call register_incompressible_species('cloud_water', 1)
-      call register_incompressible_species('rain', 1)
+      call register_variable('cloud_water', 1)
+      call register_variable('rain', 1)
    end subroutine
 
-   subroutine calc_dqdt(q_g, q_tr, temp, pressure, dqdt_g, dqdt_tr, dTdt)
-      use microphysics_register, only: n_moments__max, idx_cwater, idx_water_vapour, idx_rain
+   subroutine calc_dydt(y, n_variables, dydt)
+      use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain, idx_temp, idx_pressure
       use microphysics_constants, only: L_v => L_cond
       use microphysics_common, only: cp_mixture
 
-      real(kreal), intent(in) :: temp, pressure
-      real(kreal), intent(out) :: dTdt
-      real(kreal), dimension(n_gases), intent(in) :: q_g
-      real(kreal), dimension(n_solids,n_moments__max), intent(in) :: q_tr
-      real(kreal), dimension(n_gases), intent(out) :: dqdt_g
-      real(kreal), dimension(n_solids,n_moments__max), intent(out) :: dqdt_tr
+      integer, intent(in) :: n_variables
+      real(kreal), dimension(n_variables), intent(in) :: y
+      real(kreal), dimension(n_variables), intent(out) :: dydt
 
       real(kreal) :: ql = nan, qv = nan, qg = nan, qr = nan, qd = nan
       real(kreal) :: rho = nan, rho_g = nan
       real(kreal) :: dqrdt_autoconv = nan, dqrdt_accre = nan, dqldt_condevap = nan
-      real(kreal) :: cp_m = nan
+      real(kreal) :: cp_m = nan, temp = 0.0, pressure = 0.0
 
-      cp_m = cp_mixture(q_g, q_tr)
+      temp = y(idx_temp)
+      pressure = y(idx_pressure)
+
+      cp_m = cp_mixture(y)
 
       ! pick out specific concentrations from state vectors
-      ql = q_tr(idx_cwater, 1)
-      qr = q_tr(idx_rain, 1)
-      qv = q_g(idx_water_vapour)
-      qd = 1.0 - sum(q_g) - sum(q_tr(:,1))
+      ql = y(idx_cwater)
+      qr = y(idx_rain)
+      qv = y(idx_water_vapour)
+      qd = 1.0 - ql - qr - qv
       qg = qv + qd
 
       ! compute gas and mixture density using equation of state
@@ -52,11 +52,11 @@ module mphys_no_ice
       dqldt_condevap = dql_dt__condensation_evaporation(rho, rho_g, qv, ql, temp, pressure)
 
       ! combine to create time derivatives for species
-      dqdt_g(idx_water_vapour) = -dqldt_condevap
-      dqdt_tr(idx_cwater, 1)   =  dqldt_condevap - dqrdt_autoconv - dqrdt_accre
-      dqdt_tr(idx_rain, 1)     =                   dqrdt_autoconv + dqrdt_accre
+      dydt(idx_water_vapour) = -dqldt_condevap
+      dydt(idx_cwater)       =  dqldt_condevap - dqrdt_autoconv - dqrdt_accre
+      dydt(idx_rain)         =                   dqrdt_autoconv + dqrdt_accre
 
-      dTdt = L_v/cp_m*dqldt_condevap
+      dydt(idx_temp)         = L_v/cp_m*dqldt_condevap
 
    end subroutine
 

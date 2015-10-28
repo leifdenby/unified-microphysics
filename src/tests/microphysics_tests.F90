@@ -1,9 +1,5 @@
 program main
     use microphysics_initialisation, only: init
-    use microphysics_register, only: cv_gases, n_gases, n_moments__max, q_flux_function
-    use microphysics_common, only: cv_mixture, cp_mixture
-
-    real, dimension(:,:), allocatable :: q
 
     print *, "Testing the unified microphysics package"
 

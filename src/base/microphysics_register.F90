@@ -1,121 +1,111 @@
 module microphysics_register
    use microphysics_constants, only: kreal
    implicit none
-   public n_species
+   public n_variables, n_compressible_species, n_incompressible_species
 
    ! will be equal to the number of hydrometeors requested by the specific implementation, and will be set on init
-   integer :: n_species = 0, n_gases = 0, n_solids = 0
+   integer :: n_variables = 0, n_compressible_species = 0, n_incompressible_species = 0
 
-   ! for storing heat capacity of all tracers (incompressible and compressible)
-   real(kreal), dimension(:), allocatable :: cp_gases
-   real(kreal), dimension(:), allocatable :: cv_gases
-   real(kreal), dimension(:), allocatable :: cp_solids
-   real(kreal), dimension(:), allocatable :: cv_solids
+   ! for storing heat capacity of all species
+   real(kreal), dimension(:), allocatable :: cp_species
+   real(kreal), dimension(:), allocatable :: cv_species
    integer, dimension(:), allocatable :: moments
-   !integer, dimension(:), allocatable :: compressible_species, incompressible_species
+   ! array which will store which variables of the state vector are species
+   ! concentrations
+   integer, dimension(:), allocatable :: q_species_flag
 
    integer :: n_moments__max = -1
 
    ! variables for indexing into state array
    integer :: idx_cwater=0, idx_rain=0, idx_cice=0, idx_graupel=0, idx_water_vapour=0
+   integer :: idx_temp=0, idx_pressure=0
 
    ! pointers to subroutines used in microphysics calculation
    procedure(), pointer :: q_flux_function => null()
 
 contains
    subroutine reset()
-      n_species = 0
-      n_gases = 0
-      n_solids = 0
+      n_variables = 0
+      n_compressible_species = 0
+      n_incompressible_species = 0
       n_moments__max = 0
       idx_cwater = 0
       idx_rain = 0
       idx_cice = 0
       idx_graupel = 0
       idx_water_vapour = 0
+      idx_temp = 0
+      idx_pressure = 0
    end subroutine reset
 
-   subroutine register_compressible_species(var_name, cp__in, cv__in)
+   subroutine register_variable(var_name, n_moments)
       use microphysics_constants, only: cp_d, cv_d, cp_v, cv_v
+      use microphysics_constants, only: cp_l, cv_l, cp_i, cv_i
+
       character(len=*), intent(in) :: var_name
-      real(kreal), intent(in), optional :: cp__in, cv__in
+      integer, intent(in), optional :: n_moments
 
-      real(kreal) :: cp, cv
+      real(kreal) :: cp = 0.0, cv = 0.0
       integer :: species_idx = -1
+      integer :: is_spec_conc
 
-      n_gases = n_gases+1
-      species_idx = n_gases
+      is_spec_conc = 1
+      n_variables = n_variables+1
+      species_idx = n_variables
+
 
       if (trim(var_name) == 'water_vapour') then
+         n_compressible_species = n_compressible_species+1
          idx_water_vapour = species_idx
          cp = cp_v
          cv = cv_v
-      else
-         print *, "Registration methods not implemented for compressible species ", trim(var_name)
-      endif
-
-      if (present(cp__in)) then
-         cp = cp__in
-      endif
-      if (present(cv__in)) then
-         cv = cv__in
-      endif
-
-      call array_append_real(cp_gases, cp)
-      call array_append_real(cv_gases, cv)
-
-      n_species = n_species+1
-   end subroutine register_compressible_species
-
-   subroutine register_incompressible_species(var_name, n_moments, cp__in, cv__in)
-      use microphysics_constants, only: cp_l, cv_l, cp_i, cv_i
-      character(len=*), intent(in) :: var_name
-      integer, intent(in) :: n_moments
-      real(kreal), intent(in), optional :: cp__in, cv__in
-
-      real(kreal) :: cp, cv
-      integer :: species_idx = -1
-
-      n_solids = n_solids+1
-      species_idx = n_solids
-
-      if (trim(var_name) == 'cloud_water') then
+      else if (trim(var_name) == 'cloud_water') then
          idx_cwater = species_idx
          cp = cp_l
          cv = cv_l
+         n_incompressible_species = n_incompressible_species+1
       else if (trim(var_name) == 'rain') then
          idx_rain = species_idx
          cp = cp_l
          cv = cv_l
+         n_incompressible_species = n_incompressible_species+1
       else if (trim(var_name) == 'cloud_ice') then
          idx_cice = species_idx
          cp = cp_i
          cv = cv_i
+         n_incompressible_species = n_incompressible_species+1
       else if (trim(var_name) == 'graupel') then
          idx_graupel = species_idx
          cp = cp_i
          cv = cv_i
+         n_incompressible_species = n_incompressible_species+1
+      else if (trim(var_name) == 'temperature') then
+         idx_temp = species_idx
+         cp = 0.0
+         cv = 0.0
+         is_spec_conc = 0
+      else if (trim(var_name) == 'pressure') then
+         idx_pressure = species_idx
+         cp = 0.0
+         cv = 0.0
+         is_spec_conc = 0
       else
-         print *, "Registration methods not implemented for hydrometeor ", trim(var_name)
+         print *, "Registration methods not implemented for species ", trim(var_name)
+         stop(0)
       endif
 
-      if (present(cp__in)) then
-         cp = cp__in
-      endif
-      if (present(cv__in)) then
-         cv = cv__in
+      call array_append_real(cp_species, cp)
+      call array_append_real(cv_species, cv)
+      call array_append_int(q_species_flag, is_spec_conc)
+
+      if (present(n_moments)) then
+         if (n_moments > n_moments__max) then
+            n_moments__max = n_moments
+         endif
+         call array_append_int(moments, n_moments)
       endif
 
-      if (n_moments > n_moments__max) then
-         n_moments__max = n_moments
-      endif
-
-      call array_append_real(cp_solids, cp)
-      call array_append_real(cv_solids, cv)
-      call array_append_int(moments, n_moments)
-
-      n_species = n_species+1
-   end subroutine register_incompressible_species
+   end subroutine register_variable
 
    subroutine array_append_real(arr, item)
       real(kreal), dimension(:), allocatable, intent(inout) :: arr
