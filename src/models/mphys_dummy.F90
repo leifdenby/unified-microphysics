@@ -10,7 +10,6 @@ module mphys_dummy
 
    real(kreal), parameter :: radwatc = 1.0
 
-
    contains
    subroutine init()
       call register_variable('cloud_water', 1)
@@ -19,13 +18,14 @@ module mphys_dummy
       call register_variable('graupel', 1)
    end subroutine
 
-   subroutine calc_dydt(y, n_variables, dydt)
+   pure function dydt(t, y)
       use microphysics_register, only: idx_cwater, idx_water_vapour
       use microphysics_constants, only: L_cond
+      integer, parameter :: n_species = 4
 
-      integer, intent(in) :: n_variables
-      real(kreal), dimension(n_variables), intent(in) :: y
-      real(kreal), dimension(n_variables), intent(out) :: dydt
+      real(kreal), intent(in) :: t
+      real(kreal), dimension(n_species), intent(in) :: y
+      real(kreal), dimension(n_species) :: dydt
 
-   end subroutine
+   end function
 end module mphys_dummy

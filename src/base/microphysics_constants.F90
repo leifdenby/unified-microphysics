@@ -19,7 +19,7 @@ module microphysics_constants
    ! specific heat capacity (at constant pressure) for water vapour [J/kg/K]
    real(kreal), parameter :: cp_v = 1864._kreal
    ! specific heat capacity (at constant volume) for water vapour [J/kg/K]
-   real(kreal), parameter :: cv_v = 1402.55_kreal
+   real(kreal), parameter :: cv_v = 1402.5_kreal
 
    ! specific heat capacity (at constant pressure) for liquid water [J/kg/K]
    real(kreal), parameter :: cp_l = 4183._kreal

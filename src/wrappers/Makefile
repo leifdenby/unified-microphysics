@@ -1,7 +1,7 @@
 models := $(wildcard ../models/mphys_*.F90)
 objects := $(patsubst %.F90,%.o, $(models))
 
-base_src = ../base/microphysics_constants.F90 ../base/microphysics_common.F90 ../base/microphysics_register.F90 ../base/microphysics_integration.F90
+base_src = ../base/microphysics_constants.F90 ../base/microphysics_common.F90 ../base/microphysics_register.F90
 
 # Notes
 #

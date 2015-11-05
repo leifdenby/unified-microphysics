@@ -1,6 +1,6 @@
 module microphysics_initialisation
    use microphysics_register, only: register_variable, n_compressible_species, n_incompressible_species
-   use microphysics_register, only: q_flux_function, reset_register => reset
+   use microphysics_register, only: reset_register => reset
 
    implicit none
 

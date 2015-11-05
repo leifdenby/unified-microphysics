@@ -12,6 +12,8 @@ um_constants = {
     'cv_d': um_constants_fortran.cv_d,
     'cp_v': um_constants_fortran.cp_v,
     'cv_v': um_constants_fortran.cv_v,
+    'cp_l': um_constants_fortran.cp_l,
+    'cv_l': um_constants_fortran.cv_l,
     'pv_sat': {
         'p0vs': um_constants_fortran.p0vs,
         'a0_lq': um_constants_fortran.a0_lq,

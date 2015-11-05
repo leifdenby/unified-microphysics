@@ -1,7 +1,7 @@
 !> Wrapper which allows calling of microphysics routines from Python
 module microphysics_pylib
    use microphysics_initialisation, only: mp_init => init
-   use microphysics_register, only: q_flux_function, n_variables
+   use microphysics_register, only: n_variables
 
    implicit none
 contains
@@ -27,8 +27,8 @@ contains
 
       if (.not. init_called()) then
          error_mesg = "`init` hasn't been called, please run `init(microphysics_name)` before calling any other functions"
-      else
-         call q_flux_function(y, pressure, dydt_)
+      !else
+         !call q_flux_function(y, pressure, dydt_)
       endif
    end subroutine dydt
 

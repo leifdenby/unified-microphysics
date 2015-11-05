@@ -11,7 +11,8 @@ um_fortran = unified_microphysics.fortran
 pylib = um_fortran.microphysics_pylib
 um_register = um_fortran.microphysics_register
 um_common = um_fortran.microphysics_common
-um_integration = um_fortran.microphysics_integration
+mphys_no_ice = um_fortran.mphys_no_ice
+# um_integration = um_fortran.microphysics_integration
 
 def test_init():
     pylib.init('no_ice')
@@ -114,27 +115,71 @@ def test_cond_evap():
 
     assert abs(dqldt_1 - dqldt_2) < 1.0e-16
 
+    T = 288.
+    p = 88676.
+    qv = 1.2e-2
+    ql = 2.0e-7
+    qr = 0.0
+    qd = 1.0 - ql - qv
+    rho = mu_model.rho_f(qd=qd, ql=ql, qv=qv, qr=qr, p=p, temp=T)
+    rho_g = mu_model.rho_f(qd=qd, ql=0.0, qv=qv, qr=0.0, p=p, temp=T)
 
-def _test_full():
+    dqldt_1 = pyclouds_model.dql_dt__cond_evap(rho=rho, rho_g=rho_g, qv=qv, ql=ql, T=T, p=p)
+    dqldt_2 = mu_model.dql_dt__condensation_evaporation(rho=rho, rho_g=rho_g, qv=qv, ql=ql, t=T, p=p)
+
+    assert abs(dqldt_1 - dqldt_2) < 1.0e-16
+
+
+def test_full1():
     state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
+
+
     F = np.zeros((Var.NUM))
     F[Var.q_v] = 0.017
     F[Var.T] = 285.0
     p = 101325.0
 
-    q_g, y, T = state_mapping.pycloud_um(F=F)
+    y = state_mapping.pycloud_um(F=F, p=p)
 
-    dqdt_g, dqdt_tr, dTdt, _ = pylib.dqdt(q_g=q_g, y=y, temp=T, pressure=p)
-    dFdz1 = state_mapping.um_pycloud(q_g=dqdt_g, y=dqdt_tr, T=dTdt)
-
-    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
+    dydt = mphys_no_ice.dydt(y=y, t=0.0)
+    dFdz1, _ = state_mapping.um_pycloud(y=dydt)
 
     dFdz2 = pyclouds_model.dFdt(F=F, t=None, p=p)
 
-    Var.print_formatted(dFdz1)
-    Var.print_formatted(dFdz2)
+    assert np.all(dFdz1 == dFdz2)
+
+def test_full2():
+    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
+
+    # sub-saturation state
+    F = np.zeros((Var.NUM))
+    T = 288.
+    p = 88676.
+    qv = 1.1e-2
+    ql = 2.0e-4
+    F[Var.q_v] = qv
+    F[Var.q_l] = ql
+    F[Var.T] = T
+
+    y = state_mapping.pycloud_um(F=F, p=p)
+
+    dydt = mphys_no_ice.dydt(y=y, t=0.0)
+    dFdz1, _ = state_mapping.um_pycloud(y=dydt)
+
+    dFdz2 = pyclouds_model.dFdt(F=F, t=None, p=p)
+
+    Sw = qv/pyclouds_model.qv_sat(T=T, p=p)
+
+    assert Sw < 1.0
+
+    Var.print_formatted(dFdz1, '%.10g')
+    Var.print_formatted(dFdz2, '%.10g')
+    Var.print_formatted(dFdz2-dFdz1, '%.10g')
 
     assert np.all(dFdz1 == dFdz2)
+    assert dFdz1[Var.q_l] < 0.0
 
 
 def test_equation_of_state():
@@ -180,24 +225,69 @@ def test_equation_of_state():
     assert abs(rho_1 - rho_2) < 1.0e-16
 
 
-def test_integration():
-    pylib.init('no_ice')
-    assert um_register.n_compressible_species == 1
-    assert um_register.n_incompressible_species == 2
-
-    mu_model = um_fortran.mphys_no_ice
-    mu_common = um_fortran.microphysics_common
-
+def test_heat_capacity():
     state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
 
+    # init pyclouds model
+    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
+
+    # sub-saturation state
     F = np.zeros((Var.NUM))
-    F[Var.q_v] = 0.01
-    F[Var.T] = 300.
-    p = 101325.0
+    T = 288.
+    p = 88676.
+    qv = 1.2e-2
+    ql = 2.0e-7
+    qr = 0.0
+    qd = 1.0 - ql - qv
+    F[Var.q_v] = qv
+    F[Var.T] = T
+    F[Var.q_l] = ql
 
     y = state_mapping.pycloud_um(F=F, p=p)
 
-    dy, _ = um_integration.calc_dy_with_message(y, dt=1.0)
+    cp_m__1 = pyclouds_model.cp_m(F=F)
+    cp_m__2 = mphys_no_ice.cp_m(y)
+
+    assert abs(cp_m__1 - cp_m__2) < 1.0e-16
+
+
+    # sub-saturation state
+    F = np.zeros((Var.NUM))
+    T = 288.
+    p = 88676.
+    qv = 1.2e-2
+    ql = 5.8e-8
+    qr = 0.0
+    qd = 1.0 - ql - qv
+    F[Var.q_v] = qv
+    F[Var.T] = T
+    F[Var.q_l] = ql
+
+    y = state_mapping.pycloud_um(F=F, p=p)
+
+    cp_m__1 = pyclouds_model.cp_m(F=F)
+    cp_m__2 = mphys_no_ice.cp_m(y)
+
+    assert abs(cp_m__1 - cp_m__2) < 1.0e-16
+
+# def test_integration():
+    # pylib.init('no_ice')
+    # assert um_register.n_compressible_species == 1
+    # assert um_register.n_incompressible_species == 2
+
+    # mu_model = um_fortran.mphys_no_ice
+    # mu_common = um_fortran.microphysics_common
+
+    # state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+
+    # F = np.zeros((Var.NUM))
+    # F[Var.q_v] = 0.01
+    # F[Var.T] = 300.
+    # p = 101325.0
+
+    # y = state_mapping.pycloud_um(F=F, p=p)
+
+    # dy, _ = um_integration.calc_dy_with_message(y, dt=1.0)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,9 @@ module mphys_no_ice
    use microphysics_constants, only: kreal, nan
 
    implicit none
-   public init, rho_f, dqr_dt__autoconversion
+   integer, parameter :: n_species = 2
+
+   public init, rho_f, dqr_dt__autoconversion, cp_m
 
    contains
    subroutine init()
@@ -16,19 +18,20 @@ module mphys_no_ice
       call register_variable('rain', 1)
    end subroutine
 
-   subroutine calc_dydt(y, n_variables, dydt)
+   function dydt(t, y)
       use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain, idx_temp, idx_pressure
       use microphysics_constants, only: L_v => L_cond
       use microphysics_common, only: cp_mixture
 
-      integer, intent(in) :: n_variables
+      integer, parameter :: n_variables = 5
       real(kreal), dimension(n_variables), intent(in) :: y
-      real(kreal), dimension(n_variables), intent(out) :: dydt
+      real(kreal), intent(in) :: t
+      real(kreal) :: dydt(n_variables)
 
-      real(kreal) :: ql = nan, qv = nan, qg = nan, qr = nan, qd = nan
-      real(kreal) :: rho = nan, rho_g = nan
-      real(kreal) :: dqrdt_autoconv = nan, dqrdt_accre = nan, dqldt_condevap = nan
-      real(kreal) :: cp_m = nan, temp = 0.0, pressure = 0.0
+      real(kreal) :: ql, qv, qg, qr, qd
+      real(kreal) :: rho, rho_g
+      real(kreal) :: dqrdt_autoconv, dqrdt_accre, dqldt_condevap
+      real(kreal) :: cp_m, temp, pressure
 
       temp = y(idx_temp)
       pressure = y(idx_pressure)
@@ -39,15 +42,17 @@ module mphys_no_ice
       ql = y(idx_cwater)
       qr = y(idx_rain)
       qv = y(idx_water_vapour)
-      qd = 1.0 - ql - qr - qv
+      qd = 1.0_kreal - ql - qr - qv
       qg = qv + qd
+
+      !print *, "dydt => qv ql qr T", qv, ql, qr, temp
 
       ! compute gas and mixture density using equation of state
       rho = rho_f(qd, qv, ql, qr, pressure, temp)
       rho_g = rho_f(qd, qv, 0.0_kreal, 0.0_kreal, pressure, temp)
 
       ! compute time derivatives for each process
-      dqrdt_autoconv = dqr_dt__autoconversion(ql, qg, rho_g)
+      dqrdt_autoconv = 0._kreal*dqr_dt__autoconversion(ql, qg, rho_g)
       dqrdt_accre    = dqr_dt__accretion(ql, qg, rho_g, qr)
       dqldt_condevap = dql_dt__condensation_evaporation(rho, rho_g, qv, ql, temp, pressure)
 
@@ -58,32 +63,46 @@ module mphys_no_ice
 
       dydt(idx_temp)         = L_v/cp_m*dqldt_condevap
 
-   end subroutine
+      !print *, "qv/ ql/ qr/ T/", dydt(idx_water_vapour), dydt(idx_cwater), dydt(idx_rain), dydt(idx_temp)
+
+   end function
+
+   !> TODO: Remove this function, this is just a helper so that we can call from
+   !python for now, but ideally we'd import `microphysics_common.cp_mixture`
+   !directly
+   function cp_m(y)
+      use microphysics_common, only: cp_mixture
+
+      real(kreal), dimension(5), intent(in) :: y
+      real(kreal) :: cp_m
+
+      cp_m = cp_mixture(y)
+   end function cp_m
 
 
-   function rho_f(qd, qv, ql, qr, p, temp) result(rho)
+   pure function rho_f(qd, qv, ql, qr, p, temp) result(rho)
       use microphysics_constants, only: R_v, R_d, rho_l => rho_w
 
       real(kreal), intent(in) :: qd, qv, ql, qr, p, temp
-      real(kreal) :: rho, rho_inv = nan
+      real(kreal) :: rho, rho_inv
 
       rho_inv = (qd*R_d + qv*R_v)*temp/p + (ql+qr)/rho_l
 
-      rho = 1.0/rho_inv
+      rho = 1.0_kreal/rho_inv
    end function rho_f
 
-   function dqr_dt__autoconversion(ql, qg, rho_g)
+   pure function dqr_dt__autoconversion(ql, qg, rho_g)
       real(kreal), intent(in) :: ql, qg, rho_g
       real(kreal) :: dqr_dt__autoconversion
 
-      real(kreal) :: k_c = 1.0e-3, a_c = 5.0e-4
+      real(kreal), parameter :: k_c = 1.0e-3, a_c = 5.0e-4
 
       ! TODO: what happens if qg < 0.0 ?
       dqr_dt__autoconversion = k_c*(ql - qg/rho_g*a_c)
       dqr_dt__autoconversion = max(0.0, dqr_dt__autoconversion)
    end function dqr_dt__autoconversion
 
-   function dqr_dt__accretion(ql, qg, rho_g, qr)
+   pure function dqr_dt__accretion(ql, qg, rho_g, qr)
       use microphysics_constants, only: pi, rho_l => rho_w
 
       real(kreal), intent(in) :: ql, qg, rho_g, qr
@@ -94,7 +113,7 @@ module mphys_no_ice
       real(kreal), parameter :: a_r = 201.0  ! [m^.5 s^-1]
       real(kreal), parameter :: rho0 = 1.12
 
-      real(kreal) :: lambda_r = nan
+      real(kreal) :: lambda_r
 
       lambda_r = (pi*(qg*rho_l)/(qr*rho_g)*N0r)**(1./4.)
 
@@ -118,19 +137,24 @@ module mphys_no_ice
       real(kreal), parameter :: r_crit = 5.0e-6_kreal ! critical radius after which cloud-droplet number is increased
       real(kreal), parameter :: N0 = 200*1.0e6_kreal  ! initial cloud droplet number
 
-      real(kreal) :: r_c = nan, Nc = nan
-      real(kreal) :: pv_sat = nan, qv_sat = nan, Sw = nan
-      real(kreal) :: Dv = nan, Fd = nan
-      real(kreal) :: Ka = nan, Fk = nan
+      real(kreal) :: r_c, Nc
+      real(kreal) :: pv_sat, qv_sat, Sw
+      real(kreal) :: Dv, Fd
+      real(kreal) :: Ka, Fk
 
-      real(kreal) :: r4_3 = 4.0_kreal/3.0_kreal
-      real(kreal) :: r1_3 = 1.0_kreal/3.0_kreal
+      real(kreal), parameter :: r4_3 = 4.0_kreal/3.0_kreal
+      real(kreal), parameter :: r1_3 = 1.0_kreal/3.0_kreal
 
       ! calculate saturation concentration of water vapour
       pv_sat = pv_sat_f(T)
       qv_sat = qv_sat_f(T, p)
+      Sw = qv/qv_sat
 
-      if (ql == 0.0_kreal) then
+      if (ql == 0.0 .and. Sw > 1.0) then
+         ! TODO: Is this reasonable? The issue here is that we might try and
+         ! evaporate droplets which aren't there
+         ! TODO: This also fixes issue when ql < 0.0 which would lead to nan r_c
+         ! the cube root below
          r_c = r0
       else
          r_c = (ql*rho/(r4_3*pi*N0*rho_l))**r1_3
@@ -148,7 +172,6 @@ module mphys_no_ice
 
       ! condensation evaporation of cloud droplets (given number of droplets
       ! and droplet radius calculated above)
-      Sw = qv/qv_sat
 
       Ka = Ka_f(T)
       Fk = (Lv/(R_v*T) - 1._kreal) * (Lv/(Ka*T))
@@ -158,5 +181,10 @@ module mphys_no_ice
 
       ! compute rate of change of condensate from diffusion
       dql_dt__condensation_evaporation = 4.*pi*1./rho*Nc*r_c*(Sw - 1.0)/(Fk + Fd)
+
+      !if (isnan(dql_dt__condensation_evaporation)) then
+         !print *, "r_c, Nc, Fk, Fd, Sw", r_c, Nc, Fk, Fd, Sw
+         !stop(0)
+      !endif
    end function dql_dt__condensation_evaporation
 end module mphys_no_ice

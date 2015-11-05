@@ -21,7 +21,7 @@ module microphysics_register
    integer :: idx_temp=0, idx_pressure=0
 
    ! pointers to subroutines used in microphysics calculation
-   procedure(), pointer :: q_flux_function => null()
+   !procedure(), pointer :: q_flux_function => null()
 
 contains
    subroutine reset()
@@ -36,6 +36,19 @@ contains
       idx_water_vapour = 0
       idx_temp = 0
       idx_pressure = 0
+
+      if (allocated(cp_species)) then
+         deallocate(cp_species)
+         allocate(cp_species(0))
+      endif
+      if (allocated(cv_species)) then
+         deallocate(cv_species)
+         allocate(cv_species(0))
+      endif
+      if (allocated(q_species_flag)) then
+         deallocate(q_species_flag)
+         allocate(q_species_flag(0))
+      endif
    end subroutine reset
 
    subroutine register_variable(var_name, n_moments)

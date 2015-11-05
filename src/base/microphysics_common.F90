@@ -6,7 +6,7 @@ module microphysics_common
    public thermal_conductivity
 
    contains
-      function thermal_conductivity(temp)
+      pure function thermal_conductivity(temp)
          use microphysics_constants, only: T0, a_K, b_K
 
          real(kreal) :: thermal_conductivity
@@ -15,7 +15,7 @@ module microphysics_common
          thermal_conductivity=a_K*(temp-T0) + b_K
       end function thermal_conductivity
 
-      function water_vapour_diffusivity(temp, pressure)
+      pure function water_vapour_diffusivity(temp, pressure)
          use microphysics_constants, only: T0, ps0, a_D, b_D
 
          real(kreal) :: water_vapour_diffusivity
@@ -25,7 +25,7 @@ module microphysics_common
          water_vapour_diffusivity=a_D*(temp/T0)**b_D*10000./(pressure)
       end function water_vapour_diffusivity
 
-      function saturation_vapour_pressure(temp)
+      pure function saturation_vapour_pressure(temp)
          use microphysics_constants, only: epsmach, T0, p0vs, a0_lq, a1_lq, a0_ice, a1_ice
 
          real(kreal) :: saturation_vapour_pressure
@@ -41,7 +41,7 @@ module microphysics_common
          saturation_vapour_pressure=p0vs*exp(expon2)
       end function saturation_vapour_pressure
 
-      function saturation_vapour_concentration(temp, p)
+      pure function saturation_vapour_concentration(temp, p)
          use microphysics_constants, only: epsmach, T0, R_v, R_d
 
          real(kreal), intent(in) :: temp, p
@@ -55,13 +55,13 @@ module microphysics_common
       end function saturation_vapour_concentration
 
 
-      function cv_mixture(y)
+      pure function cv_mixture(y)
          use microphysics_register, only: n_variables, cv_species, q_species_flag
          use microphysics_constants, only: cv_d
          real(kreal), dimension(n_variables), intent(in) :: y
          real(kreal) :: cv_mixture, q_d
 
-         q_d = 1.0 - sum(y*q_species_flag)
+         q_d = 1.0_kreal - sum(y*q_species_flag)
 
          cv_mixture = cv_d*q_d + sum(y*cv_species)
       end function cv_mixture
@@ -72,7 +72,7 @@ module microphysics_common
          real(kreal), dimension(n_variables), intent(in) :: y
          real(kreal) :: cp_mixture, q_d
 
-         q_d = 1.0 - sum(y*q_species_flag)
+         q_d = 1.0_kreal - sum(y*q_species_flag)
 
          cp_mixture = cp_d*q_d + sum(y*cp_species)
       end function cp_mixture
