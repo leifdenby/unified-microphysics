@@ -7,14 +7,37 @@ module microphysics_integration
    implicit none
 
    !public calc_dy, calc_dy_with_message
+   public integrate, integrate_with_message
 
    contains
+
       subroutine integrate(y, t0, t_end)
-         real(8), intent(inout) :: y(n_species+3)
+         real(8), intent(inout) :: y(5)
+         real(8), intent(in) :: t_end, t0
+
+         character(len=100) :: msg
+         msg = " "
+
+         call integrate_with_message(y, t0, t_end, msg)
+
+         if (msg(1:1) /= " ") then
+            print *, "==============================="
+            print *, "integration failed"
+            print *, y
+            print *, msg
+            stop(0)
+         endif
+
+      end subroutine integrate
+
+      subroutine integrate_with_message(y, t0, t_end, msg)
+         real(8), intent(inout) :: y(5)
          real(8), intent(in) :: t_end, t0
          real(8) :: dt_s, t  ! sub-step timestep
 
-         character(len=100) :: msg
+         character(len=100), intent(out) :: msg
+         !f2py raise_python_exception msg
+
          msg = " "
 
          ! make initial sub-cycling full timestep, in case we can do that
@@ -34,22 +57,22 @@ module microphysics_integration
             ! use that for the next integration step
             call rkf34_original(dydt, y, t, dt_s, msg, 0)
 
+            print *, "t0", t0
+
             if (msg(1:1) /= " ") then
-               print *, "==============================="
-               print *, "integration failed"
-               print *, y
-               print *, msg
-               stop(0)
+               exit
             endif
+
          enddo
-      end subroutine integrate
+      end subroutine integrate_with_message
 
       recursive subroutine rkf34_original(dydx, y, x, dx, msg, m)
-         integer, parameter :: n = n_species + 3
+         integer, parameter :: n = 5
          character(len=100), intent(out) :: msg
          real(8), intent(inout) :: y(n), dx
          real(8), intent(inout) :: x
          integer, intent(in) :: m
+
 
          interface
             function dydx(x, y)
@@ -59,6 +82,7 @@ module microphysics_integration
          end interface
 
          real(8) :: max_abs_err
+         real(8) :: dx_min__posdef
 
          !f2py raise_python_exception msg
 
@@ -81,71 +105,119 @@ module microphysics_integration
             c1_2=1./6., c2_2=1./3.,    c3_2=1./3.,     c4_2=0.,   c5_2=1./6.
 
          real(8) :: k1(n), k2(n), k3(n), k4(n), k5(n)
-         real(8) :: abs_err(n), y_n1(n), y_n2(n), s
+         real(8) :: abs_err(n), y_n1(n), y_n2(n), s, rel_err(n)
+         real(8) :: dydx0(n), max_total_err(n)
 
          ! TODO: move these into an input variable
          real(8) :: abs_tol=1.0e-3, rel_tol=1.0e-2, max_rel_err, err
 
          logical :: done = .false.
 
+         integer :: l
+
          !print *, "Substep, dx=", dx
 
          done = .false.
 
-         k1 = 0.0
-         k2 = 0.0
-         k3 = 0.0
-         k4 = 0.0
-         k5 = 0.0
+         dydx0 = dydx(x, y)
 
-         k1 = dx*dydx(x,       y)
-         k2 = dx*dydx(x+a2*dx, y+b21*k1)
-         k3 = dx*dydx(x+a3*dx, y+b31*k1 + b32*k2)
-         k4 = dx*dydx(x+a4*dx, y+b41*k1 + b42*k2 + b43*k3)
-         k5 = dx*dydx(x+a5*dx, y+b51*k1 + b52*k2 + b53*k3 + b54*k4)
+         ! TODO: use a vector for abs error here, so that we can have a
+         ! different abs error for say specific concentration and temperature
+         !
+         ! State components that are already zero do not contribute to the
+         ! relative error calculation
+         dx_min__posdef = minval(abs(y/dydx0), y /= 0.0)
+         if (dx > dx_min__posdef) then
+            if (minval(abs(y)) < abs_tol) then
+               print *, "We should adjust down the timestep, but that would make it very small", dx_min__posdef
+               print *, "so we just take a single forward Euler step"
+               print *, y
+               print *, "dx__pd=", y/dydx0
+               print *, "dx_min__posdef", dx_min__posdef
+               print *, "dy=", dx_min__posdef*dydx0
+               y = y + dx_min__posdef*dydx0
+               x = x + dx_min__posdef
 
-         y_n1 = y + c1_1*k1 + c2_1*k2 + c3_1*k3 + c4_1*k4 + c5_1*k5
-         y_n2 = y + c1_2*k1 + c2_2*k2 + c3_2*k3 + c4_2*k4 + c5_2*k5
+               where (y < 0.0)
+                  y = 0.0
+               endwhere 
 
-         !abs_err = abs(y_n1 - y_n2)
-         abs_err = abs(1./6.*(k4 - k5))
-
-         max_abs_err = maxval(abs_err)
-         max_rel_err = maxval(abs_err/y_n2)
-
-         s = 0.84*(rel_tol*dx/max_abs_err)**0.25
-
-         if (any(isnan(y_n1)) .or. any(isnan(y_n2))) then
-            print *, "Warning: Solution became nan"
-         else
-            if (max_rel_err < rel_tol) then
+               print *, "y_new=", y
                done = .true.
-            endif 
+            else
+               print *, "Adjusting integration step down, too big to be pos def", dx, dx_min__posdef, m
+               dx = dx_min__posdef
+            endif
          endif
 
-         if (done) then
-            y = y_n2
-            x = x + dx
+         if (.not. done) then
+            k1 = 0.0
+            k2 = 0.0
+            k3 = 0.0
+            k4 = 0.0
+            k5 = 0.0
 
-            ! if the suggested scaling makes the step larger then lets use it
-            !if (s > 1.0) then
-               !dx = dx*s
-            !endif
-         else
-            if (dx < 1.0e-32) then
-               msg = "step size became very small"
-            else if (m > 1000) then
-               msg = "Didn't converge"
-               print *, "last s=", s
-               y = y_n2
+            k1 = dx*dydx(x,       y)
+            k2 = dx*dydx(x+a2*dx, y+b21*k1)
+            k3 = dx*dydx(x+a3*dx, y+b31*k1 + b32*k2)
+            k4 = dx*dydx(x+a4*dx, y+b41*k1 + b42*k2 + b43*k3)
+            k5 = dx*dydx(x+a5*dx, y+b51*k1 + b52*k2 + b53*k3 + b54*k4)
+
+            y_n1 = y + c1_1*k1 + c2_1*k2 + c3_1*k3 + c4_1*k4 + c5_1*k5
+            y_n2 = y + c1_2*k1 + c2_2*k2 + c3_2*k3 + c4_2*k4 + c5_2*k5
+
+            !abs_err = abs(y_n1 - y_n2)
+            abs_err = abs(1./6.*(k4 - k5))
+
+            if (any(y_n2 < 0.0)) then
+               msg = "Solution became negative"
+               done = .true.
+            endif
+
+            ! TODO: make abs_tol and rel_tol vectors
+            max_total_err = (abs_tol + rel_tol*abs(y))
+            s = 0.84*(minval(max_total_err/abs_err, abs_err > 0.0))**0.2
+
+            print *, "max_tot_err=", max_total_err
+            print *, "abs_err=", abs_err
+            print *, "s_all=", max_total_err/abs_err
+            print *, "s=", s
+            print *, "dx=", dx
+            print *, abs_err < max_total_err
+
+            !s = 0.84*(rel_tol*dx/max_abs_err)**0.25
+
+            if (any(isnan(y_n1)) .or. any(isnan(y_n2))) then
+               print *, "Solution became nan"
             else
-               if (s >= 1.0) then
-                  print *, "s=", s
-                  print *, "Warning: Incorrect scaling, timestep is growing."
-                  s = 0.1
+               if (all(abs_err < max_total_err)) then
+                  done = .true.
+               endif 
+            endif
+
+            if (dx < 1.0e-5) then
+               msg = "step size became very small"
+            endif
+
+            if (done) then
+               y = y_n2
+               print *, "Advancing... x, dx", x, dx
+               x = x + dx
+            else
+               print *, "We need another step..."
+               if (m > 1000) then
+                  msg = "Didn't converge"
+                  print *, "last s=", s
+                  y = y_n2
+               else
+                  if (s >= 1.0) then
+                     print *, "s=", s
+                     print *, "Warning: Incorrect scaling, timestep is growing."
+                     !s = 0.1
+                  endif
+                  dx = dx*s
+                  call rkf34_original(dydx, y, x, dx, msg, m+1)
                endif
-               dx = dx*s
-               call rkf34_original(dydx, y, x, dx, msg, m+1)
             endif
          endif
 
