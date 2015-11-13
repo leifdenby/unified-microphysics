@@ -4,7 +4,6 @@ import pyclouds.cloud_microphysics
 from pyclouds.common import Var
 import numpy as np
 import random
-from test_common import um_constants
 
 um_fortran = unified_microphysics.fortran
 
@@ -12,60 +11,14 @@ pylib = um_fortran.microphysics_pylib
 um_register = um_fortran.microphysics_register
 um_common = um_fortran.microphysics_common
 mphys_no_ice = um_fortran.mphys_no_ice
-# um_integration = um_fortran.microphysics_integration
+
+um_constants = unified_microphysics.constants
 
 def test_init():
     pylib.init('no_ice')
 
     assert um_register.n_compressible_species == 1
     assert um_register.n_incompressible_species == 2
-
-def test_state_mapping():
-    pylib.init('no_ice')
-    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
-    F = np.zeros((Var.NUM))
-
-    if um_register.idx_water_vapour != 0:
-        F[Var.q_v] = random.random()
-    if um_register.idx_cwater != 0:
-        F[Var.q_l] = random.random()
-    if um_register.idx_rain != 0:
-        F[Var.q_r] = random.random()
-    if um_register.idx_cice != 0:
-        F[Var.q_i] = random.random()
-    F[Var.T] = random.random()
-
-    p = random.random()
-
-    y = state_mapping.pycloud_um(F=F, p=p)
-    F2, p2 = state_mapping.um_pycloud(y=y)
-
-    assert np.all(F == F2)
-    assert p == p2
-
-def test_state_mapping2():
-    pylib.init('no_ice')
-    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
-
-    y = np.zeros((um_register.n_variables))
-
-    # fortran indexing starts at 1
-    if um_register.idx_water_vapour != 0:
-        y[um_register.idx_water_vapour-1] = random.random()
-    if um_register.idx_cwater != 0:
-        y[um_register.idx_cwater-1] = random.random()
-    if um_register.idx_rain != 0:
-        y[um_register.idx_rain-1] = random.random()
-    if um_register.idx_cice != 0:
-        y[um_register.idx_cice-1] = random.random()
-
-    y[um_register.idx_temp-1] = random.random()
-    y[um_register.idx_pressure-1] = random.random()
-
-    F, p2 = state_mapping.um_pycloud(y=y)
-    y2 = state_mapping.pycloud_um(F=F, p=p2)
-
-    assert np.all(y == y2)
 
 
 def test_cond_evap():
@@ -270,25 +223,70 @@ def test_heat_capacity():
 
     assert abs(cp_m__1 - cp_m__2) < 1.0e-16
 
-# def test_integration():
-    # pylib.init('no_ice')
-    # assert um_register.n_compressible_species == 1
-    # assert um_register.n_incompressible_species == 2
 
-    # mu_model = um_fortran.mphys_no_ice
-    # mu_common = um_fortran.microphysics_common
+def test_long_integration_step():
+    """
+    Make sure that integrator converges to the same solution independently of
+    whether the host model requests integration of many small steps or few
+    large steps
+    """
+    # get the tolerance values defined in fortran out
+    um_integration = um_fortran.microphysics_integration
+    abs_tol = um_integration.abs_tol
+    rel_tol = um_integration.rel_tol
 
-    # state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+    # super-saturated state
+    F = np.zeros((Var.NUM))
+    F[Var.q_v] =  1.2E-002
+    F[Var.q_l] = 3.0E-004
+    F[Var.T] = 287.5
+    p0 = 87360.0  # [Pa]
 
-    # F = np.zeros((Var.NUM))
-    # F[Var.q_v] = 0.01
-    # F[Var.T] = 300.
-    # p = 101325.0
+    t_max = 300.
 
-    # y = state_mapping.pycloud_um(F=F, p=p)
+    n_1 = 100
+    t = np.linspace(0.0, t_max, n_1)
+    F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
 
-    # dy, _ = um_integration.calc_dy_with_message(y, dt=1.0)
+    n_2 = n_1/50
+    t = np.linspace(0.0, t_max, n_2)
+    F2, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+
+    n_3 = n_1*50
+    t = np.linspace(0.0, t_max, n_3)
+    F3, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+
+    # reference solution
+    f1 = F1[-1]
+
+    # compare with large steps
+    df = F1[-1]-F2[-1]
+    rel_err = np.ma.masked_array(df/f1, f1 == 0.0).filled(0.0)
+    assert np.linalg.norm(rel_err) < rel_tol
+
+    # compare with small steps
+    df = F1[-1]-F2[-1]
+    rel_err = np.ma.masked_array(df/f1, f1 == 0.0).filled(0.0)
+    assert np.linalg.norm(rel_err) < rel_tol
+
+    # TODO: this is a hack, I'm not sure we can compare errors like this
+    abs_err = np.linalg.norm(df)*float(n_2)/float(n_1)*0.01
+    print abs_err
+    assert abs_err < abs_tol
 
 
-if __name__ == "__main__":
-    test_state_mapping2()
+    # check for changes larger than initial value since this is an indicator of instability
+    vars = [Var.q_v, Var.q_l]
+    q_max = sum([F[n] for n in vars])
+
+    dF1 = F1[1:] - F1[:-1]
+    for n in vars:
+        assert np.all(np.abs(dF1[:,n]) < q_max)
+
+    dF2 = F2[1:] - F2[:-1]
+    for n in vars:
+        assert np.all(np.abs(dF2[:,n]) < q_max)
+
+    dF3 = F3[1:] - F3[:-1]
+    for n in vars:
+        assert np.all(np.abs(dF3[:,n]) < q_max)
