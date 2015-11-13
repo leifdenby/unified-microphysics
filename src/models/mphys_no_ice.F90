@@ -33,6 +33,8 @@ module mphys_no_ice
       real(kreal) :: dqrdt_autoconv, dqrdt_accre, dqldt_condevap
       real(kreal) :: cp_m, temp, pressure
 
+      dydt = 0.0
+
       temp = y(idx_temp)
       pressure = y(idx_pressure)
 
