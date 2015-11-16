@@ -224,9 +224,8 @@ def test_heat_capacity():
     assert abs(cp_m__1 - cp_m__2) < 1.0e-16
 
 
-def test_long_integration_step():
-    """
-    Make sure that integrator converges to the same solution independently of
+def _test_long_integration_step():
+    """ Make sure that integrator converges to the same solution independently of
     whether the host model requests integration of many small steps or few
     large steps
     """
@@ -290,3 +289,49 @@ def test_long_integration_step():
     dF3 = F3[1:] - F3[:-1]
     for n in vars:
         assert np.all(np.abs(dF3[:,n]) < q_max)
+
+def test_long_integration_very_small():
+    """
+    Make sure that the integrator can handle very small concentrations
+    """
+    # get the tolerance values defined in fortran out
+    um_integration = um_fortran.microphysics_integration
+    abs_tol = um_integration.abs_tol
+    rel_tol = um_integration.rel_tol
+
+    # super-saturated state
+    F = np.zeros((Var.NUM))
+    F[Var.q_v] =  1.3E-002
+    F[Var.q_l] = 1.7E-184
+    F[Var.T] = 297.019
+    p0 = 99835.578483693796 # [Pa]
+
+    # t = [0., 10., 20.]
+    # F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+
+    # low concentration state
+    F = np.zeros((Var.NUM))
+    F[Var.q_v] =  1.3E-200
+    F[Var.q_l] = 1.7E-184
+    F[Var.T] = 297.019
+    p0 = 99835.578483693796 # [Pa]
+
+    t = [0., 10., 20.]
+    # F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+
+    states_dt = []
+    # states_dt.append("27861.407803556413        235.09957042102803        1.5134365769422074E-004   2.1718649357875098E-228")
+    # states_dt.append("99814.018498220757        297.52241095914763        1.3299859120580425E-002   1.4262881033833411E-024   0.0000000000000000")
+    # states_dt.append("95518.458265905574        293.74472467007939        1.1847279113138988E-002   6.5939621073124898E-024   0.0000000000000000")
+    states_dt.append((21.261768343566246, "87356.354491443504        287.29050207276362        1.1620359396091596E-002   2.3304008211767397E-004   0.0000000000000000"))
+
+    for dt, state_str in states_dt:
+        state = [float(s) for s in state_str.split()]
+        F = np.zeros((Var.NUM))
+        F[Var.q_v] = state[2]
+        F[Var.q_l] = state[3]
+        F[Var.T] = state[1]
+        p0 = state[0]
+
+        t = [0., dt, 2.*dt]
+        F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)

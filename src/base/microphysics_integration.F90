@@ -9,8 +9,11 @@ module microphysics_integration
    !public calc_dy, calc_dy_with_message
    public integrate, integrate_with_message
 
+
    logical, parameter :: debug = .false.
    real(8), parameter :: abs_tol=1.0e-8, rel_tol=1.0e-4
+   real(8), parameter :: dx_min = 1.0e-10
+   integer, parameter :: max_steps = 10
 
    contains
 
@@ -62,13 +65,14 @@ module microphysics_integration
             ! evolve y, t and dt_s using the integrator
             ! dt_s will be the time-step that was actually used, so that we can
             ! use that for the next integration step
+
+            if (debug) then
+               print *, "=> t", t
+            endif
+
             m = 0
             call rkf34_original(dydt, y, t, dt_s, msg, m)
             m_total = m_total + m
-
-            if (debug) then
-               print *, "t", t
-            endif
 
             if (msg(1:1) /= " ") then
                exit
@@ -140,33 +144,41 @@ module microphysics_integration
          ! State components that are already zero do not contribute to the
          ! relative error calculation
          dx_min__posdef = minval(abs(y/dydx0), y /= 0.0)
-         if (dx > dx_min__posdef) then
-            s = 0.5*dx_min__posdef/dx
-            dx = s*dx
+         if (dx_min__posdef > dx_min) then
+            if (dx > dx_min__posdef) then
+               print *, "Adjusting integration step down, too big to be pos def"
+               print *, "dx dx_min__posdef, m", dx, dx_min__posdef, m
+               print *, ""
+               s = 0.5*dx_min__posdef/dx
+               dx = s*dx
+               if (debug) then
+                  print *, "Initial timestep risks solution becoming negative, scaling timestep"
+                  print *, "by s=", s
+                  print *, "dx_new", dx
+               endif
+            endif
+         else
             if (debug) then
-               print *, "Initial timestep risks solution becoming negative, scaling timestep"
-               print *, "by s=", s
+               print *, "Timestep required for pos def is very small so we just take a single forward"
+               print *, "Euler step before runge-kutta integration"
+               print *, "dx dx_min, dx_min__posdef", dx, dx_min, dx_min__posdef
+               print *, "y=", y
+               print *, "dx__pd=", y/dydx0
+               print *, "dy=", dx_min__posdef*dydx0
+               print *, ""
+            endif
+            y = y + dx_min__posdef*dydx0
+            x = x + dx_min__posdef
+
+            if (debug) then
+               print *, "y_new=", y
             endif
 
-               !if (minval(abs(y)) < abs_tol) then
-               !!print *, "We should adjust down the timestep, but that would make it very small", dx_min__posdef
-               !!print *, "so we just take a single forward Euler step"
-               !!print *, y
-               !print *, "dx__pd=", y/dydx0
-               !!print *, "dx_min__posdef", dx_min__posdef
-               !!print *, "dy=", dx_min__posdef*dydx0
-               !y = y + dx_min__posdef*dydx0
-               !x = x + dx_min__posdef
-
-               !where (y < 0.0)
-                  !y = 0.0
-               !endwhere 
-
-               !!print *, "y_new=", y
-               !done = .true.
-            !else
-               !print *, "Adjusting integration step down, too big to be pos def", dx, dx_min__posdef, m
-            !endif
+            ! TODO: There's got to be a better way than this, we want to make
+            ! sure we get exactly to zero
+            where (y < 1.0e-40)
+               y = 0.0
+            endwhere 
          endif
 
          if (.not. done) then
@@ -219,15 +231,17 @@ module microphysics_integration
                print *, ":: scaling by s", s
             endif
 
-            dx = dx*s
-
             if (any(isnan(y_n1)) .or. any(isnan(y_n2))) then
-               print *, "Solution became nan"
-               print *, "s dt", s, dx
-               print *, "y=", y
-               if (s > 1.0) then
-                  s = 0.9
+               if (debug) then
+                  print *, "Solution became nan"
+                  print *, "s dt", s, dx
+                  print *, "y=", y
                endif
+               if (s > 1.0) then
+                  s = 0.1
+               endif
+               !msg = "solution became nan"
+               !done = .true.
             else
                if (all(abs_err < max_total_err)) then
                   done = .true.
@@ -236,15 +250,10 @@ module microphysics_integration
                endif 
             endif
 
-            if (dx < 1.0e-10) then
-               msg = "step size became very small"
-               done = .true.
-               stop(0)
-            endif
+            dx = dx*s
 
             if (.not. done) then
-               !print *, "We need another step..."
-               if (m > 1000) then
+               if (m > max_steps) then
                   msg = "Didn't converge"
                   print *, "last s=", s
                   y = y_n2
