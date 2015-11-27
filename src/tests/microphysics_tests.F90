@@ -3,7 +3,7 @@ program main
 
     print *, "Testing the unified microphysics package"
 
-    call init()
+    call init('dummy', 'isobaric')
 
     !allocate(q(n_species, n_moments__max))
 

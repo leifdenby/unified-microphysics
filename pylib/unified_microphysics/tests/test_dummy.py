@@ -12,18 +12,18 @@ um_constants = unified_microphysics.constants
 pylib = um_fortran.microphysics_pylib
 
 def test_init():
-    pylib.init('dummy')
+    pylib.init('dummy', 'isobaric')
 
     assert um_register.n_compressible_species == 1
     assert um_register.n_incompressible_species == 4
 
-    pylib.init('dummy')
+    pylib.init('dummy', 'isobaric')
 
     assert um_register.n_compressible_species == 1
     assert um_register.n_incompressible_species == 4
 
 def test_state_mapping():
-    pylib.init('dummy')
+    pylib.init('dummy', 'isobaric')
     state_mapping = unified_microphysics.utils.PyCloudsUnifiedMicrophysicsStateMapping()
     F = np.zeros((Var.NUM))
 
@@ -46,7 +46,7 @@ def test_state_mapping():
     assert p == p2
 
 def test_state_mapping2():
-    pylib.init('dummy')
+    pylib.init('dummy', 'isobaric')
     state_mapping = unified_microphysics.utils.PyCloudsUnifiedMicrophysicsStateMapping()
 
     y = np.zeros((um_register.n_variables))

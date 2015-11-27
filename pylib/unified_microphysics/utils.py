@@ -68,8 +68,9 @@ def multistep_integration(F0, p0, t, with_debug=False):
     n_steps = 0
     for tn in range(len(t)-1):
         # modifies `y` in-place
-        _, m_total = um_fortran.microphysics_integration.integrate_with_message(y=y, t0=t[tn], t_end=t[tn+1])
-        n_steps += m_total
+        um_fortran.microphysics_pylib.integrate_microphysics(y=y, t=t[tn], t_end=t[tn+1])
+        # TODO: re-implement getting out the total number of steps
+        # n_steps += m_total
         F.append(state_mapping.um_pycloud(y=y)[0])
         t_.append(t[tn+1])
 

@@ -2,31 +2,52 @@
 module microphysics_integration
    !use microphysics_register, only: q_flux_function
    !use rungekuttafehlberg,    only: rkf45
-   use mphys_no_ice, only: dydt, n_species
+   use mphys_no_ice, only: dydt_mphys => dydt, n_species
+   use microphysics_constants, only: abs_tol => integration_abs_tol, rel_tol => integration_rel_tol
 
    implicit none
 
    !public calc_dy, calc_dy_with_message
-   public integrate, integrate_with_message
+   public integrate_with_message, integrate_isometric, integrate_isobaric
 
 
    logical, parameter :: debug = .false.
-   real(8), parameter :: abs_tol=1.0e-8, rel_tol=1.0e-4
    real(8), parameter :: dx_min = 1.0e-10
    integer, parameter :: max_steps = 10
 
-   contains
+   procedure(), pointer :: integrate => null()
 
-      subroutine integrate(y, t0, t_end)
+   contains
+      !!!!!!!!!!! Isometric
+      pure function dydt_isometric(t, y) result(dydt)
+         use microphysics_common, only: cv_mixture
+
+         real(8), intent(in) :: t, y(5)
+         real(8) :: c_m, dydt(5)
+
+         c_m = cv_mixture(y)
+
+         dydt = dydt_mphys(t, y, c_m)
+      end function dydt_isometric
+
+      pure function fix_y_isometric(y_old, dy) result(y_new)
+         real(8), intent(in) :: y_old(5), dy(5)
+         real(8) :: y_new(5)
+
+         y_new = y_old + dy
+      end function fix_y_isometric
+
+      subroutine integrate_isometric(y, t0, t_end, msg_out)
          real(8), intent(inout) :: y(5)
          real(8), intent(in) :: t_end, t0
+         character(len=100), optional :: msg_out
+         character(len=100) :: msg
 
          integer :: m_total
-         character(len=100) :: msg
          msg = " "
          m_total = 0
 
-         call integrate_with_message(y, t0, t_end, msg, m_total)
+         call integrate_with_message(dydt_isometric, y, increment_state_isometric, t0, t_end, msg, m_total)
 
          if (msg(1:1) /= " ") then
             print *, "==============================="
@@ -36,13 +57,99 @@ module microphysics_integration
             stop(0)
          endif
 
-      end subroutine integrate
+         if (present(msg_out)) then
+            msg_out = msg
+         endif
+      end subroutine integrate_isometric
 
-      subroutine integrate_with_message(y, t0, t_end, msg, m_total)
+      !> Return a new state changed by increment `dy` keeping constant volume,
+      !method is intended to guarantee self-consistency of new state `y_new`
+      ! TODO: Implement mass-scaling
+      pure function increment_state_isometric(y, dy) result(y_new)
+         use microphysics_register, only: idx_pressure
+
+         real(8), intent(in) :: y(5), dy(5)
+         real(8) :: y_new(5), rho_old
+
+         rho_old = density_eos(y)
+         y_new = y + dy
+
+         ! need to update pressure, since we assume constant volume density is
+         ! unchanged, use old density to calculate update pressure
+         y_new(idx_pressure) = pressure_eos(y_new, rho_old)
+
+      end function increment_state_isometric
+      !!!!!!!!!! end isometric
+
+      !!!!!!!!!! isobaric
+      subroutine integrate_isobaric(y, t0, t_end, msg_out)
+         real(8), intent(inout) :: y(5)
+         real(8), intent(in) :: t_end, t0
+         character(len=100), optional :: msg_out
+
+         character(len=100) :: msg
+         integer :: m_total
+
+         msg = " "
+         m_total = 0
+
+         call integrate_with_message(dydt_isobaric, y, increment_state_isobaric, t0, t_end, msg, m_total)
+
+         if (msg(1:1) /= " ") then
+            print *, "==============================="
+            print *, "integration failed"
+            print *, y
+            print *, msg
+            stop(0)
+         endif
+
+         if (present(msg_out)) then
+            msg_out = msg
+         endif
+
+      end subroutine integrate_isobaric
+
+      pure function dydt_isobaric(t, y) result(dydt)
+         use microphysics_common, only: cp_mixture
+
+         real(8), intent(in) :: t, y(5)
+         real(8) :: c_m, dydt(5)
+
+         c_m = cp_mixture(y)
+
+         dydt = dydt_mphys(t, y, c_m)
+      end function dydt_isobaric
+
+      !> Return a new state changed by increment `dy`, method is intended to
+      !guarantee self-consistency of new state `y_new`
+      ! TODO: Implement mass-scaling
+      pure function increment_state_isobaric(y, dy) result(y_new)
+         real(8), intent(in) :: y(5), dy(5)
+         real(8) :: y_new(5)
+
+         y_new = y + dy
+      end function increment_state_isobaric
+      !!!!!!!!!!! end isobaric
+
+      subroutine integrate_with_message(dydt_f, y, fix_y, t0, t_end, msg, m_total)
          real(8), intent(inout) :: y(5)
          real(8), intent(in) :: t_end, t0
          real(8) :: dt_s, t  ! sub-step timestep
          integer, intent(out) :: m_total
+
+         interface
+            pure function dydt_f(x, y)
+               real(8), intent(in) :: x, y(5)
+               real(8) :: dydt_f(5)
+            end function
+         end interface
+
+         interface
+            pure function fix_y(y_old, dy)
+               real(8), intent(in) :: y_old(5), dy(5)
+               real(8) :: fix_y(5)
+            end function
+         end interface
 
          character(len=100), intent(out) :: msg
          integer :: m
@@ -71,7 +178,7 @@ module microphysics_integration
             endif
 
             m = 0
-            call rkf34_original(dydt, y, t, dt_s, msg, m)
+            call rkf34_original(dydt_f, y, fix_y, t, dt_s, msg, m)
             m_total = m_total + m
 
             if (msg(1:1) /= " ") then
@@ -81,7 +188,56 @@ module microphysics_integration
          enddo
       end subroutine integrate_with_message
 
-      recursive subroutine rkf34_original(dydx, y, x, dx, msg, m)
+
+      !> Compute pressure from equation of state.
+      ! Because state representation doesn't contain density (it is diagnosed)
+      ! we need to supply a density so that pressure can be calculated from the
+      ! other state variables
+      pure function pressure_eos(y, rho) result(p)
+         use microphysics_register, only: idx_temp
+         use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain
+         use microphysics_constants, only: R_v, R_d, rho_l => rho_w
+
+         real(8), intent(in) :: y(5), rho
+
+         real(8) :: temp, qd, qv, ql, qr
+         real(8) :: p
+
+         temp = y(idx_temp)
+
+         ql = y(idx_cwater)
+         qr = y(idx_rain)
+         qv = y(idx_water_vapour)
+         qd = 1.0 - ql - qr - qv
+
+         p = temp*(qd*R_d + qv*R_v)/(1./rho - rho_l/ql)
+
+      end function pressure_eos
+
+      !> Calculate density of mixture from equation of state
+      pure function density_eos(y) result(rho)
+         use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain
+         use microphysics_register, only: idx_temp, idx_pressure
+         use microphysics_constants, only: R_v, R_d, rho_l => rho_w
+
+         real(8), intent(in) :: y(5)
+
+         real(8) :: temp, p, qd, qv, ql, qr
+         real(8) :: rho
+
+         p = y(idx_pressure)
+         temp = y(idx_temp)
+
+         ql = y(idx_cwater)
+         qr = y(idx_rain)
+         qv = y(idx_water_vapour)
+         qd = 1.0 - ql - qr - qv
+
+         rho = 1.0/( (qd*R_d + qv*R_v)*temp/p + (ql+qr)/rho_l )
+      end function density_eos
+
+
+      recursive subroutine rkf34_original(dydx, y, fix_y, x, dx, msg, m)
          integer, parameter :: n = 5
          character(len=100), intent(out) :: msg
          real(8), intent(inout) :: y(n), dx
@@ -90,9 +246,16 @@ module microphysics_integration
 
 
          interface
-            function dydx(x, y)
+            pure function dydx(x, y)
                real(8), intent(in) :: x, y(5)
                real(8) :: dydx(5)
+            end function
+         end interface
+
+         interface
+            pure function fix_y(y_old, dy)
+               real(8), intent(in) :: y_old(5), dy(5)
+               real(8) :: fix_y(5)
             end function
          end interface
 
@@ -189,13 +352,13 @@ module microphysics_integration
             k5 = 0.0
 
             k1 = dx*dydx(x,       y)
-            k2 = dx*dydx(x+a2*dx, y+b21*k1)
-            k3 = dx*dydx(x+a3*dx, y+b31*k1 + b32*k2)
-            k4 = dx*dydx(x+a4*dx, y+b41*k1 + b42*k2 + b43*k3)
-            k5 = dx*dydx(x+a5*dx, y+b51*k1 + b52*k2 + b53*k3 + b54*k4)
+            k2 = dx*dydx(x+a2*dx, fix_y(y, b21*k1))
+            k3 = dx*dydx(x+a3*dx, fix_y(y, b31*k1 + b32*k2))
+            k4 = dx*dydx(x+a4*dx, fix_y(y, b41*k1 + b42*k2 + b43*k3))
+            k5 = dx*dydx(x+a5*dx, fix_y(y, b51*k1 + b52*k2 + b53*k3 + b54*k4))
 
-            y_n1 = y + c1_1*k1 + c2_1*k2 + c3_1*k3 + c4_1*k4 + c5_1*k5
-            y_n2 = y + c1_2*k1 + c2_2*k2 + c3_2*k3 + c4_2*k4 + c5_2*k5
+            y_n1 = fix_y(y, c1_1*k1 + c2_1*k2 + c3_1*k3 + c4_1*k4 + c5_1*k5)
+            y_n2 = fix_y(y, c1_2*k1 + c2_2*k2 + c3_2*k3 + c4_2*k4 + c5_2*k5)
 
             !abs_err = abs(y_n1 - y_n2)
             abs_err = abs(1./6.*(k4 - k5))
@@ -263,7 +426,7 @@ module microphysics_integration
                      !print *, "Warning: Incorrect scaling, timestep is growing."
                      !!s = 0.1
                   !endif
-                  call rkf34_original(dydx, y, x, dx, msg, m+1)
+                  call rkf34_original(dydx, y, fix_y, x, dx, msg, m+1)
                endif
             endif
          endif

@@ -30,7 +30,7 @@ module mphys_kessler_old
       !> The old "Kessler microphysics" method in ATHAM performed explicit split
       !> integration, so we expose a subroutine to integrate the microphysics
       !> processes here
-      subroutine integrate(y, t0, t_end)
+      subroutine integrate_isobaric(y, t0, t_end)
          use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain, idx_temp, idx_pressure
          use microphysics_register, only: idx_cice, idx_graupel
 
@@ -85,7 +85,7 @@ module mphys_kessler_old
 
          !print *, "dtemp dqv dql dqr dqi dqgr", tempflx, wet_flx, watc_flx, watp_flx, ice_flx, gra_flx
 
-      end subroutine integrate
+      end subroutine integrate_isobaric
 
 
       subroutine kessler_processes(p,temp, dt, &

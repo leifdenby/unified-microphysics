@@ -8,7 +8,7 @@ module mphys_no_ice
    implicit none
    integer, parameter :: n_species = 2
 
-   public init, rho_f, dqr_dt__autoconversion, cp_m
+   public init, rho_f, dqr_dt__autoconversion
 
    contains
    subroutine init()
@@ -18,27 +18,26 @@ module mphys_no_ice
       call register_variable('rain', 1)
    end subroutine
 
-   function dydt(t, y)
+   pure function dydt(t, y, c_m)
       use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain, idx_temp, idx_pressure
       use microphysics_constants, only: L_v => L_cond
-      use microphysics_common, only: cp_mixture
 
       integer, parameter :: n_variables = 5
       real(kreal), dimension(n_variables), intent(in) :: y
-      real(kreal), intent(in) :: t
+      real(kreal), intent(in) :: t, c_m
       real(kreal) :: dydt(n_variables)
 
       real(kreal) :: ql, qv, qg, qr, qd
       real(kreal) :: rho, rho_g
       real(kreal) :: dqrdt_autoconv, dqrdt_accre, dqldt_condevap
-      real(kreal) :: cp_m, temp, pressure
+      real(kreal) :: temp, pressure
 
+      ! OBS: it's important to make sure that return variable is initiated to
+      ! zero
       dydt = 0.0
 
       temp = y(idx_temp)
       pressure = y(idx_pressure)
-
-      cp_m = cp_mixture(y)
 
       ! pick out specific concentrations from state vectors
       ql = y(idx_cwater)
@@ -63,23 +62,11 @@ module mphys_no_ice
       dydt(idx_cwater)       =  dqldt_condevap - dqrdt_autoconv - dqrdt_accre
       dydt(idx_rain)         =                   dqrdt_autoconv + dqrdt_accre
 
-      dydt(idx_temp)         = L_v/cp_m*dqldt_condevap
+      dydt(idx_temp) = L_v/c_m*dqldt_condevap
 
       !print *, "qv/ ql/ qr/ T/", dydt(idx_water_vapour), dydt(idx_cwater), dydt(idx_rain), dydt(idx_temp)
 
    end function
-
-   !> TODO: Remove this function, this is just a helper so that we can call from
-   !python for now, but ideally we'd import `microphysics_common.cp_mixture`
-   !directly
-   function cp_m(y)
-      use microphysics_common, only: cp_mixture
-
-      real(kreal), dimension(5), intent(in) :: y
-      real(kreal) :: cp_m
-
-      cp_m = cp_mixture(y)
-   end function cp_m
 
 
    pure function rho_f(qd, qv, ql, qr, p, temp) result(rho)
@@ -124,7 +111,7 @@ module mphys_no_ice
       dqr_dt__accretion = max(0.0, dqr_dt__accretion)
    end function dqr_dt__accretion
 
-   function dql_dt__condensation_evaporation(rho, rho_g, qv, ql, T, p)
+   pure function dql_dt__condensation_evaporation(rho, rho_g, qv, ql, T, p)
       use microphysics_common, only: pv_sat_f => saturation_vapour_pressure
       use microphysics_common, only: qv_sat_f => saturation_vapour_concentration
       use microphysics_common, only: Ka_f => thermal_conductivity

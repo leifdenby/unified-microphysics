@@ -15,7 +15,7 @@ mphys_no_ice = um_fortran.mphys_no_ice
 um_constants = unified_microphysics.constants
 
 def test_init():
-    pylib.init('no_ice')
+    pylib.init('no_ice', 'isobaric')
 
     assert um_register.n_compressible_species == 1
     assert um_register.n_incompressible_species == 2
@@ -84,6 +84,8 @@ def test_cond_evap():
 
 
 def test_full1():
+    pylib.init('no_ice', 'isobaric')
+
     state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
     pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
 
@@ -95,7 +97,10 @@ def test_full1():
 
     y = state_mapping.pycloud_um(F=F, p=p)
 
-    dydt = mphys_no_ice.dydt(y=y, t=0.0)
+    # calc heat capacity of mixture
+    c_m = pylib.mixture_heat_capacity(y)
+
+    dydt = mphys_no_ice.dydt(y=y, t=0.0, c_m=c_m)
     dFdz1, _ = state_mapping.um_pycloud(y=dydt)
 
     dFdz2 = pyclouds_model.dFdt(F=F, t=None, p=p)
@@ -118,7 +123,10 @@ def test_full2():
 
     y = state_mapping.pycloud_um(F=F, p=p)
 
-    dydt = mphys_no_ice.dydt(y=y, t=0.0)
+    # calc heat capacity of mixture
+    c_m = pylib.mixture_heat_capacity(y)
+
+    dydt = mphys_no_ice.dydt(y=y, t=0.0, c_m=c_m)
     dFdz1, _ = state_mapping.um_pycloud(y=dydt)
 
     dFdz2 = pyclouds_model.dFdt(F=F, t=None, p=p)
@@ -136,7 +144,7 @@ def test_full2():
 
 
 def test_equation_of_state():
-    pylib.init('no_ice')
+    pylib.init('no_ice', 'isobaric')
     assert um_register.n_compressible_species == 1
     assert um_register.n_incompressible_species == 2
 
@@ -178,61 +186,64 @@ def test_equation_of_state():
     assert abs(rho_1 - rho_2) < 1.0e-16
 
 
-def test_heat_capacity():
+def test_heat_capacity_constant_pressure():
+    pylib.init('no_ice', 'isobaric')
     state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
 
     # init pyclouds model
     pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
 
     # sub-saturation state
-    F = np.zeros((Var.NUM))
-    T = 288.
+    F = Var.make_state(T=288., q_v=1.2e-2, q_l=2.0e-7)
     p = 88676.
-    qv = 1.2e-2
-    ql = 2.0e-7
-    qr = 0.0
-    qd = 1.0 - ql - qv
-    F[Var.q_v] = qv
-    F[Var.T] = T
-    F[Var.q_l] = ql
 
     y = state_mapping.pycloud_um(F=F, p=p)
 
     cp_m__1 = pyclouds_model.cp_m(F=F)
-    cp_m__2 = mphys_no_ice.cp_m(y)
+    cp_m__2 = pylib.mixture_heat_capacity(y)
 
     assert abs(cp_m__1 - cp_m__2) < 1.0e-16
 
 
     # sub-saturation state
-    F = np.zeros((Var.NUM))
-    T = 288.
+    F = Var.make_state(T=288., q_v=1.2e-2, q_l=5.8e-8, q_r=0.0)
     p = 88676.
-    qv = 1.2e-2
-    ql = 5.8e-8
-    qr = 0.0
-    qd = 1.0 - ql - qv
-    F[Var.q_v] = qv
-    F[Var.T] = T
-    F[Var.q_l] = ql
-
     y = state_mapping.pycloud_um(F=F, p=p)
 
     cp_m__1 = pyclouds_model.cp_m(F=F)
-    cp_m__2 = mphys_no_ice.cp_m(y)
+    cp_m__2 = pylib.mixture_heat_capacity(y)
 
     assert abs(cp_m__1 - cp_m__2) < 1.0e-16
 
 
-def _test_long_integration_step():
+def test_heat_capacity_constant_volume():
+    pylib.init('no_ice', 'isometric')
+    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+
+    # init pyclouds model
+    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
+
+    F = Var.make_state(T=288., q_v=1.2e-2, q_l=2.0e-7)
+    p = 88676.
+
+    y = state_mapping.pycloud_um(F=F, p=p)
+
+    cv_m__1 = pyclouds_model.cv_m(F=F)
+    cv_m__2 = pylib.mixture_heat_capacity(y)
+
+    assert abs(cv_m__1 - cv_m__2) < 1.0e-16
+
+
+def test_long_integration_step():
     """ Make sure that integrator converges to the same solution independently of
     whether the host model requests integration of many small steps or few
     large steps
     """
+    pylib.init('no_ice', 'isobaric')
+
     # get the tolerance values defined in fortran out
-    um_integration = um_fortran.microphysics_integration
-    abs_tol = um_integration.abs_tol
-    rel_tol = um_integration.rel_tol
+    abs_tol = um_constants.integration_abs_tol
+    rel_tol = um_constants.integration_rel_tol
 
     # super-saturated state
     F = np.zeros((Var.NUM))
@@ -257,6 +268,9 @@ def _test_long_integration_step():
 
     # reference solution
     f1 = F1[-1]
+
+    # make sure we don't have any nans in the solution
+    assert not np.any(np.isnan(f1))
 
     # compare with large steps
     df = F1[-1]-F2[-1]
@@ -290,14 +304,17 @@ def _test_long_integration_step():
     for n in vars:
         assert np.all(np.abs(dF3[:,n]) < q_max)
 
+    print "done"
+
 def test_long_integration_very_small():
     """
     Make sure that the integrator can handle very small concentrations
     """
+    pylib.init('no_ice', 'isobaric')
+
     # get the tolerance values defined in fortran out
-    um_integration = um_fortran.microphysics_integration
-    abs_tol = um_integration.abs_tol
-    rel_tol = um_integration.rel_tol
+    abs_tol = um_constants.integration_abs_tol
+    rel_tol = um_constants.integration_rel_tol
 
     # super-saturated state
     F = np.zeros((Var.NUM))
@@ -324,6 +341,7 @@ def test_long_integration_very_small():
     # states_dt.append("99814.018498220757        297.52241095914763        1.3299859120580425E-002   1.4262881033833411E-024   0.0000000000000000")
     # states_dt.append("95518.458265905574        293.74472467007939        1.1847279113138988E-002   6.5939621073124898E-024   0.0000000000000000")
     states_dt.append((21.261768343566246, "87356.354491443504        287.29050207276362        1.1620359396091596E-002   2.3304008211767397E-004   0.0000000000000000"))
+    states_dt.append((0.0, "99835.008685662935        297.02016991797183        1.3598797808482679E-002   0.0000000000000000        0.0000000000000000"))
 
     for dt, state_str in states_dt:
         state = [float(s) for s in state_str.split()]
@@ -335,3 +353,6 @@ def test_long_integration_very_small():
 
         t = [0., dt, 2.*dt]
         F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+
+if __name__ == '__main__':
+    test_long_integration_step()

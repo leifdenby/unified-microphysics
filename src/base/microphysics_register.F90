@@ -6,6 +6,10 @@ module microphysics_register
    ! will be equal to the number of hydrometeors requested by the specific implementation, and will be set on init
    integer :: n_variables = 0, n_compressible_species = 0, n_incompressible_species = 0
 
+   integer :: model_constraint = 0
+   integer, parameter :: MODEL_CONSTRAINT_ISOBARIC = 1
+   integer, parameter :: MODEL_CONSTRAINT_ISOMETRIC = 2
+
    ! for storing heat capacity of all species
    real(kreal), dimension(:), allocatable :: cp_species
    real(kreal), dimension(:), allocatable :: cv_species

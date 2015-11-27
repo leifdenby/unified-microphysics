@@ -31,4 +31,15 @@ constants = {
     'rho_i': um_constants_fortran.rho_i,
 }
 
+for k in filter(lambda k: not k.startswith('_'), um_constants_fortran.__dict__):
+    if not k in constants:
+        constants[k] = getattr(um_constants_fortran, k)
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+constants = AttrDict(constants)
+
 __all__ = ['utils', 'fortran', 'constants', ]

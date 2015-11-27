@@ -66,7 +66,7 @@ module microphysics_common
          cv_mixture = cv_d*q_d + sum(y*cv_species)
       end function cv_mixture
 
-      function cp_mixture(y)
+      pure function cp_mixture(y)
          use microphysics_register, only: n_variables, cp_species, q_species_flag
          use microphysics_constants, only: cp_d
          real(kreal), dimension(n_variables), intent(in) :: y

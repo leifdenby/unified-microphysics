@@ -72,4 +72,8 @@ module microphysics_constants
    real(kreal), parameter :: a_D=2.20e-5_kreal
    real(kreal), parameter :: b_D=1.92_kreal
 
+   ! Absolute and relative tolerance when performing microphysics integration
+   real(kreal), parameter :: integration_abs_tol=1.0e-8
+   real(kreal), parameter :: integration_rel_tol=1.0e-4
+
 end module microphysics_constants

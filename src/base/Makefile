@@ -28,12 +28,12 @@ microphysics_register.o: microphysics_constants.o
 microphysics_common.o: microphysics_register.o microphysics_common.F90
 	$(FC) $(FFLAGS) -c microphysics_common.F90
 
-microphysics_initialisation.o: $(model_sources) microphysics_initialisation.tpl.F90
-	python generate_wrapper.py
-	$(FC) $(FFLAGS) -c microphysics_initialisation.F90
-
 microphysics_integration.o: microphysics_register.o microphysics_common.F90 ../integrators/libmicrophysics_integrators.a
 	$(FC) $(FFLAGS) -c microphysics_integration.F90 -L../integrators -lmicrophysics_integrators -I../integrators
+
+microphysics_initialisation.o: $(model_sources) microphysics_initialisation.tpl.F90 microphysics_integration.o
+	python generate_wrapper.py
+	$(FC) $(FFLAGS) -c microphysics_initialisation.F90
 
 # module for each microphysics implementation
 $(objects): $(wildcard mphys_*.F90) microphysics_common.o microphysics_register.o microphysics_constants.o
