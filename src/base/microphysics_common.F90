@@ -54,6 +54,27 @@ module microphysics_common
          saturation_vapour_concentration = (eps*pv_sat)/(p-(1.-eps)*pv_sat)
       end function saturation_vapour_concentration
 
+      pure function cp_gas(y)
+         use microphysics_register, only: n_variables, cp_species, q_species_flag, idx_water_vapour
+         use microphysics_constants, only: cp_d, cp_v
+         real(kreal), dimension(n_variables), intent(in) :: y
+         real(kreal) :: cp_gas, q_d
+
+         q_d = 1.0_kreal - sum(y*q_species_flag)
+
+         cp_gas = cp_d*q_d + cp_v*y(idx_water_vapour)/(q_d + y(idx_water_vapour))
+      end function
+
+      pure function cv_gas(y)
+         use microphysics_register, only: n_variables, cv_species, q_species_flag, idx_water_vapour
+         use microphysics_constants, only: cv_d, cv_v
+         real(kreal), dimension(n_variables), intent(in) :: y
+         real(kreal) :: cv_gas, q_d
+
+         q_d = 1.0_kreal - sum(y*q_species_flag)
+
+         cv_gas = (cv_d*q_d + cv_v*y(idx_water_vapour))/(q_d + y(idx_water_vapour))
+      end function
 
       pure function cv_mixture(y)
          use microphysics_register, only: n_variables, cv_species, q_species_flag

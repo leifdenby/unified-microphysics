@@ -46,9 +46,7 @@ module mphys_kessler_old
          real(kreal) :: drynew, tempflx
          real(kreal) :: densair
          real(kreal) :: dt = 0.0
-         character(len=100) :: msg
 
-         msg = " "
          dt = t_end - t0
 
          p = y(idx_pressure)

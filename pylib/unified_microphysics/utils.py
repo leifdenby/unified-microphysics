@@ -40,9 +40,10 @@ class PyCloudsUnifiedMicrophysicsStateMapping():
         if self.idx_cice != -1:
             F[Var.q_i] = y[self.idx_cice]
         F[Var.T] = y[self.idx_temp]
-        return F, y[self.idx_pressure]
+        F[Var.p] = y[self.idx_pressure]
+        return F
 
-    def pycloud_um(self, F, p):
+    def pycloud_um(self, F):
         y = np.zeros((self.n_vars,))
 
         if self.idx_water_vapour != -1:
@@ -54,15 +55,15 @@ class PyCloudsUnifiedMicrophysicsStateMapping():
         if self.idx_cice != -1:
             y[self.idx_cice] = F[Var.q_i]
         y[self.idx_temp] = F[Var.T]
-        y[self.idx_pressure] = p
+        y[self.idx_pressure] = F[Var.p]
         return y
 
-def multistep_integration(F0, p0, t, with_debug=False):
+def multistep_integration(F0, t, with_debug=False):
     warnings.warn("Creating a integration wrapper that is hardcoded for `no_ice`")
     state_mapping = PyCloudsUnifiedMicrophysicsStateMapping()
 
-    y = state_mapping.pycloud_um(F0, p0)
-    F = [state_mapping.um_pycloud(y=y)[0],]
+    y = state_mapping.pycloud_um(F0)
+    F = [state_mapping.um_pycloud(y=y),]
     t_ = [t[0],]
 
     n_steps = 0
@@ -71,7 +72,7 @@ def multistep_integration(F0, p0, t, with_debug=False):
         um_fortran.microphysics_pylib.integrate_microphysics(y=y, t=t[tn], t_end=t[tn+1])
         # TODO: re-implement getting out the total number of steps
         # n_steps += m_total
-        F.append(state_mapping.um_pycloud(y=y)[0])
+        F.append(state_mapping.um_pycloud(y=y))
         t_.append(t[tn+1])
 
     if with_debug:

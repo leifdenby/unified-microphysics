@@ -49,23 +49,25 @@ module microphysics_integration
 
          call integrate_with_message(dydt_isometric, y, increment_state_isometric, t0, t_end, msg, m_total)
 
-         if (msg(1:1) /= " ") then
-            print *, "==============================="
-            print *, "integration failed"
-            print *, y
-            print *, msg
-            stop(0)
-         endif
-
          if (present(msg_out)) then
-            msg_out = msg
+            !TODO: when calling from ATHAM this "optional" value is set although
+            !it it shouldn't be. Can't use it right now
+            !msg_out = msg
+         else
+            if (msg(1:1) /= " ") then
+               print *, "==============================="
+               print *, "integration failed"
+               print *, y
+               print *, msg
+               stop(0)
+            endif
          endif
       end subroutine integrate_isometric
 
       !> Return a new state changed by increment `dy` keeping constant volume,
       !method is intended to guarantee self-consistency of new state `y_new`
       ! TODO: Implement mass-scaling
-      pure function increment_state_isometric(y, dy) result(y_new)
+      function increment_state_isometric(y, dy) result(y_new)
          use microphysics_register, only: idx_pressure
 
          real(8), intent(in) :: y(5), dy(5)
@@ -95,16 +97,16 @@ module microphysics_integration
 
          call integrate_with_message(dydt_isobaric, y, increment_state_isobaric, t0, t_end, msg, m_total)
 
-         if (msg(1:1) /= " ") then
-            print *, "==============================="
-            print *, "integration failed"
-            print *, y
-            print *, msg
-            stop(0)
-         endif
-
          if (present(msg_out)) then
             msg_out = msg
+         else
+            if (msg(1:1) /= " ") then
+               print *, "==============================="
+               print *, "integration failed"
+               print *, y
+               print *, msg
+               stop(0)
+            endif
          endif
 
       end subroutine integrate_isobaric
@@ -138,14 +140,14 @@ module microphysics_integration
          integer, intent(out) :: m_total
 
          interface
-            pure function dydt_f(x, y)
+            function dydt_f(x, y)
                real(8), intent(in) :: x, y(5)
                real(8) :: dydt_f(5)
             end function
          end interface
 
          interface
-            pure function fix_y(y_old, dy)
+            function fix_y(y_old, dy)
                real(8), intent(in) :: y_old(5), dy(5)
                real(8) :: fix_y(5)
             end function
@@ -210,7 +212,7 @@ module microphysics_integration
          qv = y(idx_water_vapour)
          qd = 1.0 - ql - qr - qv
 
-         p = temp*(qd*R_d + qv*R_v)/(1./rho - rho_l/ql)
+         p = temp*(qd*R_d + qv*R_v)/(1./rho - ql/rho_l)
 
       end function pressure_eos
 
@@ -246,14 +248,14 @@ module microphysics_integration
 
 
          interface
-            pure function dydx(x, y)
+            function dydx(x, y)
                real(8), intent(in) :: x, y(5)
                real(8) :: dydx(5)
             end function
          end interface
 
          interface
-            pure function fix_y(y_old, dy)
+            function fix_y(y_old, dy)
                real(8), intent(in) :: y_old(5), dy(5)
                real(8) :: fix_y(5)
             end function

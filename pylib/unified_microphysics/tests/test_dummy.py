@@ -39,11 +39,10 @@ def test_state_mapping():
 
     p = random.random()
 
-    y = state_mapping.pycloud_um(F=F, p=p)
-    F2, p2 = state_mapping.um_pycloud(y=y)
+    y = state_mapping.pycloud_um(F=F)
+    F2 = state_mapping.um_pycloud(y=y)
 
     assert np.all(F == F2)
-    assert p == p2
 
 def test_state_mapping2():
     pylib.init('dummy', 'isobaric')
@@ -64,7 +63,7 @@ def test_state_mapping2():
     y[um_register.idx_temp-1] = random.random()
     y[um_register.idx_pressure-1] = random.random()
 
-    F, p2 = state_mapping.um_pycloud(y=y)
-    y2 = state_mapping.pycloud_um(F=F, p=p2)
+    F = state_mapping.um_pycloud(y=y)
+    y2 = state_mapping.pycloud_um(F=F)
 
     assert np.all(y == y2)

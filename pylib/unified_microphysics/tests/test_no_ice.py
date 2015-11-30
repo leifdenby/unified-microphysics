@@ -84,32 +84,36 @@ def test_cond_evap():
 
 
 def test_full1():
-    pylib.init('no_ice', 'isobaric')
+    model_constraint = 'isobaric'
+    pylib.init('no_ice', model_constraint)
 
-    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
-    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
+    state_mapping = unified_microphysics.utils.PyCloudsUnifiedMicrophysicsStateMapping()
+    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants, model_constraint=model_constraint)
 
 
     F = np.zeros((Var.NUM))
     F[Var.q_v] = 0.017
     F[Var.T] = 285.0
-    p = 101325.0
+    F[Var.p] = 101325.0
 
-    y = state_mapping.pycloud_um(F=F, p=p)
+    y = state_mapping.pycloud_um(F=F)
 
     # calc heat capacity of mixture
     c_m = pylib.mixture_heat_capacity(y)
 
     dydt = mphys_no_ice.dydt(y=y, t=0.0, c_m=c_m)
-    dFdz1, _ = state_mapping.um_pycloud(y=dydt)
+    dFdz1 = state_mapping.um_pycloud(y=dydt)
 
-    dFdz2 = pyclouds_model.dFdt(F=F, t=None, p=p)
+    dFdz2 = pyclouds_model.dFdt(F=F, t=None)
 
     assert np.all(dFdz1 == dFdz2)
 
 def test_full2():
-    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
-    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
+    model_constraint = 'isobaric'
+    pylib.init('no_ice', model_constraint)
+
+    state_mapping = unified_microphysics.utils.PyCloudsUnifiedMicrophysicsStateMapping()
+    pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants, model_constraint=model_constraint)
 
     # sub-saturation state
     F = np.zeros((Var.NUM))
@@ -120,16 +124,17 @@ def test_full2():
     F[Var.q_v] = qv
     F[Var.q_l] = ql
     F[Var.T] = T
+    F[Var.p] = p
 
-    y = state_mapping.pycloud_um(F=F, p=p)
+    y = state_mapping.pycloud_um(F=F)
 
     # calc heat capacity of mixture
     c_m = pylib.mixture_heat_capacity(y)
 
     dydt = mphys_no_ice.dydt(y=y, t=0.0, c_m=c_m)
-    dFdz1, _ = state_mapping.um_pycloud(y=dydt)
+    dFdz1 = state_mapping.um_pycloud(y=dydt)
 
-    dFdz2 = pyclouds_model.dFdt(F=F, t=None, p=p)
+    dFdz2 = pyclouds_model.dFdt(F=F, t=None)
 
     Sw = qv/pyclouds_model.qv_sat(T=T, p=p)
 
@@ -188,7 +193,7 @@ def test_equation_of_state():
 
 def test_heat_capacity_constant_pressure():
     pylib.init('no_ice', 'isobaric')
-    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+    state_mapping = unified_microphysics.utils.PyCloudsUnifiedMicrophysicsStateMapping()
 
     # init pyclouds model
     pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
@@ -197,7 +202,7 @@ def test_heat_capacity_constant_pressure():
     F = Var.make_state(T=288., q_v=1.2e-2, q_l=2.0e-7)
     p = 88676.
 
-    y = state_mapping.pycloud_um(F=F, p=p)
+    y = state_mapping.pycloud_um(F=F)
 
     cp_m__1 = pyclouds_model.cp_m(F=F)
     cp_m__2 = pylib.mixture_heat_capacity(y)
@@ -208,7 +213,7 @@ def test_heat_capacity_constant_pressure():
     # sub-saturation state
     F = Var.make_state(T=288., q_v=1.2e-2, q_l=5.8e-8, q_r=0.0)
     p = 88676.
-    y = state_mapping.pycloud_um(F=F, p=p)
+    y = state_mapping.pycloud_um(F=F)
 
     cp_m__1 = pyclouds_model.cp_m(F=F)
     cp_m__2 = pylib.mixture_heat_capacity(y)
@@ -218,7 +223,7 @@ def test_heat_capacity_constant_pressure():
 
 def test_heat_capacity_constant_volume():
     pylib.init('no_ice', 'isometric')
-    state_mapping = pyclouds.cloud_microphysics.PyCloudsUnifiedMicrophysicsStateMapping()
+    state_mapping = unified_microphysics.utils.PyCloudsUnifiedMicrophysicsStateMapping()
 
     # init pyclouds model
     pyclouds_model = pyclouds.cloud_microphysics.FiniteCondensationTimeMicrophysics(constants=um_constants)
@@ -226,7 +231,7 @@ def test_heat_capacity_constant_volume():
     F = Var.make_state(T=288., q_v=1.2e-2, q_l=2.0e-7)
     p = 88676.
 
-    y = state_mapping.pycloud_um(F=F, p=p)
+    y = state_mapping.pycloud_um(F=F)
 
     cv_m__1 = pyclouds_model.cv_m(F=F)
     cv_m__2 = pylib.mixture_heat_capacity(y)
@@ -251,20 +256,21 @@ def test_long_integration_step():
     F[Var.q_l] = 3.0E-004
     F[Var.T] = 287.5
     p0 = 87360.0  # [Pa]
+    F[Var.p] = p0
 
     t_max = 300.
 
     n_1 = 100
     t = np.linspace(0.0, t_max, n_1)
-    F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+    F1, _ = unified_microphysics.utils.multistep_integration(F0=F, t=t)
 
     n_2 = n_1/50
     t = np.linspace(0.0, t_max, n_2)
-    F2, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+    F2, _ = unified_microphysics.utils.multistep_integration(F0=F, t=t)
 
     n_3 = n_1*50
     t = np.linspace(0.0, t_max, n_3)
-    F3, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+    F3, _ = unified_microphysics.utils.multistep_integration(F0=F, t=t)
 
     # reference solution
     f1 = F1[-1]
@@ -324,7 +330,7 @@ def test_long_integration_very_small():
     p0 = 99835.578483693796 # [Pa]
 
     # t = [0., 10., 20.]
-    # F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+    # F1, _ = unified_microphysics.utils.multistep_integration(F0=F, t=t)
 
     # low concentration state
     F = np.zeros((Var.NUM))
@@ -334,7 +340,7 @@ def test_long_integration_very_small():
     p0 = 99835.578483693796 # [Pa]
 
     t = [0., 10., 20.]
-    # F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+    # F1, _ = unified_microphysics.utils.multistep_integration(F0=F, t=t)
 
     states_dt = []
     # states_dt.append("27861.407803556413        235.09957042102803        1.5134365769422074E-004   2.1718649357875098E-228")
@@ -349,10 +355,10 @@ def test_long_integration_very_small():
         F[Var.q_v] = state[2]
         F[Var.q_l] = state[3]
         F[Var.T] = state[1]
-        p0 = state[0]
+        F[Var.p] = state[0]
 
         t = [0., dt, 2.*dt]
-        F1, _ = unified_microphysics.utils.multistep_integration(F0=F, p0=p0, t=t)
+        F1, _ = unified_microphysics.utils.multistep_integration(F0=F, t=t)
 
 if __name__ == '__main__':
     test_long_integration_step()
