@@ -40,10 +40,14 @@ $(objects): $(wildcard mphys_*.F90) microphysics_common.o microphysics_register.
 	$(FC) $(FFLAGS) -c $(patsubst %.o, %.F90, $@)
 
 libunified_microphysics.a: $(objects) microphysics_register.o microphysics_initialisation.o microphysics_integration.o
-	ar crs libunified_microphysics.a ../integrators/_rkf45.o microphysics_register.o microphysics_common.o microphysics_initialisation.o microphysics_integration.o $(subst ../models/,,$(objects))
+	ar crs libunified_microphysics.a microphysics_register.o microphysics_common.o microphysics_initialisation.o microphysics_integration.o $(subst ../models/,,$(objects))
+	mkdir -p ../../lib
 	cp libunified_microphysics.a ../../lib
+	mkdir -p ../../include
 	cp *.mod ../../include
 
 clean:
 	rm -f *.o *.mod lib*.a
 	rm -f microphysics_initialisation.F90
+	rm -rf ../../include
+	rm -rf ../../lib

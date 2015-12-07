@@ -9,3 +9,5 @@ attic/
 *.nfs*
 .cache/
 *.pyc
+include/
+lib/
