@@ -13,9 +13,10 @@ base_src = ../base/microphysics_constants.F90 ../base/microphysics_common.F90 ..
 #     	$(GC) $(FFLAGS) -lunified_microphysics -L. microphysics_tests.F90 -o microphysics_tests
 
 FFLAGS :=-g -O0 -fPIC
-FC?=gfortran  # must use gfortran until I find out how to make f2py use ifort
+FC?=ifort
 
 IFLAGS:=-I../base -I../integrators
+FCOMPILER=intelem
 
 unified_microphysics_fortran.so: microphysics_pylib.F90 $(models) $(base_src)
 	#f2py -c -m unified_microphysics microphysics_constants.F90 microphysics_common.F90 microphysics_register.F90  #microphysics_initialisation.o $(objects)
@@ -23,7 +24,7 @@ unified_microphysics_fortran.so: microphysics_pylib.F90 $(models) $(base_src)
 
 	# TODO: Can't import `calc_dqdt` right now because the compilation requires the number of hydrometeors set, maybe we can define a constant somewhere?
 	#f2py -L../base -lunified_microphysics -I../base --no-lower -c -m unified_microphysics_fortran $(base_src) $(models) microphysics_pylib.F90 skip: cv_mixture cp_mixture array_append_real array_append_int calc_dqdt f advance :
-	f2py -L../base -lunified_microphysics $(IFLAGS) --no-lower -c -m unified_microphysics_fortran $(base_src) $(models) microphysics_pylib.F90 skip: integrate cv_mixture cp_mixture array_append_real array_append_int calc_dqdt f advance rkf34_original :
+	f2py --fcompiler=$(FCOMPILER) -L../base -lunified_microphysics $(IFLAGS) --no-lower -c -m unified_microphysics_fortran $(base_src) $(models) microphysics_pylib.F90 skip: integrate cv_mixture cp_mixture cp_gas cv_gas array_append_real array_append_int calc_dqdt f advance rkf34_original :
 	cp unified_microphysics_fortran.so ../../pylib/unified_microphysics/
 
 python: unified_microphysics_fortran.so

@@ -8,12 +8,10 @@
 #     	$(GC) $(FFLAGS) -lunified_microphysics -L. microphysics_tests.F90 -o microphysics_tests
 
 FFLAGS :=-g -O0 -fPIC
-GC:=gfortran  # must use gfortran until I find out how to make f2py use ifort
+FC:=ifort
 
 all: python
-	#$(GC) -l unified_microphysics -L. test.F90 -o test
-	$(GC) $(FFLAGS) microphysics_tests.F90 -o microphysics_tests -lunified_microphysics -L../base -I../base
-	#gfortran mphys_dummy.o microphysics_register.o test.F90 -o test
+	$(FC) $(FFLAGS) microphysics_tests.F90 -o microphysics_tests -lunified_microphysics -L../base -I../base
 	./microphysics_tests
 	env PYTHONPATH=../../pylib/:$(PYTHONPATH) py.test ../../pylib/unified_microphysics/tests -v
 
