@@ -318,9 +318,11 @@ module microphysics_integration
          dx_min__posdef = minval(abs(y/dydx0), y /= 0.0)
          if (dx_min__posdef > dx_min) then
             if (dx > dx_min__posdef) then
-               print *, "Adjusting integration step down, too big to be pos def"
-               print *, "dx dx_min__posdef, m", dx, dx_min__posdef, m
-               print *, ""
+                  if (debug) then
+                      print *, "Adjusting integration step down, too big to be pos def"
+                      print *, "dx dx_min__posdef, m", dx, dx_min__posdef, m
+                      print *, ""
+                  endif
                s = 0.5*dx_min__posdef/dx
                dx = s*dx
                if (debug) then
@@ -378,12 +380,14 @@ module microphysics_integration
 
             if (any(y_n2 < 0.0)) then
                !msg = "Solution became negative"
-               print *, "=> solution became negative"
-               print *, "dx s", dx, s
-               print *, "y", y
-               print *, "y_n2", y_n2
-               print *, "max_tot_err", max_total_err
-               print *, "abs_err", abs_err
+               if (debug) then
+                  print *, "=> solution became negative"
+                  print *, "dx s", dx, s
+                  print *, "y", y
+                  print *, "y_n2", y_n2
+                  print *, "max_tot_err", max_total_err
+                  print *, "abs_err", abs_err
+               endif
 
                if (s > 1.0) then
                   msg = "s was huge"
@@ -416,6 +420,8 @@ module microphysics_integration
                !done = .true.
             else
                if (all(abs_err < max_total_err)) then
+                  ! clear the error message, in case it was set earlier
+                  msg = " "
                   done = .true.
                   y = y_n2
                   x = x + dx
