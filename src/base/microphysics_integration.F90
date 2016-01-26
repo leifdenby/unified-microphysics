@@ -4,7 +4,7 @@
 
 !> Integration helpers for isometric (constant volume integration)
 module isometric_integration_helpers
-   use mphys_no_ice, only: dydt_mphys => dydt, n_species
+   use mphys_no_ice, only: dydt_mphys => dydt
    use integrators, only: integrate_with_message
 
    implicit none
@@ -109,7 +109,7 @@ module isometric_integration_helpers
 end module
 
 module isobaric_integration_helpers
-   use mphys_no_ice, only: dydt_mphys => dydt, n_species
+   use mphys_no_ice, only: dydt_mphys => dydt
    use integrators, only: integrate_with_message
 
    implicit none

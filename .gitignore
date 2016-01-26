@@ -11,3 +11,4 @@ attic/
 *.pyc
 include/
 lib/
+src/odespy
