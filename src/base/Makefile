@@ -16,6 +16,10 @@ FC?=gfortran  # must use gfortran until I find out how to make f2py use ifort
 
 all: $(objects) libunified_microphysics.a
 
+ifeq ($(FC),mpif90)
+	FFLAGS=$(FFLAGS) -DMPI
+endif
+
 ../integrators/libmicrophysics_integrators.a:
 	FC=$(FC) $(MAKE) -C ../integrators
 

@@ -4,7 +4,10 @@ module microphysics_integration
    !use rungekuttafehlberg,    only: rkf45
    use mphys_no_ice, only: dydt_mphys => dydt, n_species
    use microphysics_constants, only: abs_tol => integration_abs_tol, rel_tol => integration_rel_tol
+
+#ifdef MPI
    use mpi
+#endif
 
    implicit none
 
@@ -61,7 +64,9 @@ module microphysics_integration
             !msg_out = msg
          else
             if (msg(1:1) /= " ") then
+#ifdef MPI
                call MPI_COMM_RANK(MPI_COMM_WORLD, mpi_rank, ierror)
+#endif
                print *, "==============================="
                print *, "integration failed"
                print *, mpi_rank, ":", y0
@@ -252,7 +257,6 @@ module microphysics_integration
          real(8), intent(inout) :: y(n), dx
          real(8), intent(inout) :: x
          integer, intent(in) :: m
-
 
          interface
             function dydx(x, y)
