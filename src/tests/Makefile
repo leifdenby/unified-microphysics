@@ -8,7 +8,7 @@
 #     	$(GC) $(FFLAGS) -lunified_microphysics -L. microphysics_tests.F90 -o microphysics_tests
 
 FFLAGS :=-g -O0 -fPIC
-FC:=ifort
+FC?=gfortran
 
 all: python
 	$(FC) $(FFLAGS) microphysics_tests.F90 -o microphysics_tests -lunified_microphysics -L../base -I../base

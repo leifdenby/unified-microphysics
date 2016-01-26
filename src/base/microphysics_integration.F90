@@ -26,8 +26,9 @@ module microphysics_integration
       pure function dydt_isometric(t, y) result(dydt)
          use microphysics_common, only: cv_mixture
 
-         real(8), intent(in) :: t, y(5)
-         real(8) :: c_m, dydt(5)
+         real(8), intent(in) :: t
+         real(8), intent(in), dimension(:) :: y
+         real(8) :: c_m, dydt(size(y))
 
          c_m = cv_mixture(y)
 
@@ -35,18 +36,19 @@ module microphysics_integration
       end function dydt_isometric
 
       pure function fix_y_isometric(y_old, dy) result(y_new)
-         real(8), intent(in) :: y_old(5), dy(5)
-         real(8) :: y_new(5)
+         real(8), intent(in), dimension(:) :: y_old, dy
+         real(8), dimension(size(y_old)) :: y_new
 
          y_new = y_old + dy
       end function fix_y_isometric
 
-      subroutine integrate_isometric(y, t0, t_end, msg_out)
-         real(8), intent(inout) :: y(5)
+      subroutine integrate_isometric(y, t0, t_end, msg_out, n)
+         integer, intent(in) :: n
+         real(8), intent(inout), dimension(n) :: y
          real(8), intent(in) :: t_end, t0
          character(len=100), optional :: msg_out
          character(len=100) :: msg
-         real(8) :: y0(5)
+         real(8) :: y0(size(y))
          integer :: mpi_rank, ierror
          integer :: m_total
 
@@ -82,8 +84,8 @@ module microphysics_integration
       function increment_state_isometric(y, dy) result(y_new)
          use microphysics_register, only: idx_pressure
 
-         real(8), intent(in) :: y(5), dy(5)
-         real(8) :: y_new(5), rho_old
+         real(8), intent(in), dimension(:) :: y, dy
+         real(8) :: y_new(size(y)), rho_old
 
          rho_old = density_eos(y)
          y_new = y + dy
@@ -96,8 +98,9 @@ module microphysics_integration
       !!!!!!!!!! end isometric
 
       !!!!!!!!!! isobaric
-      subroutine integrate_isobaric(y, t0, t_end, msg_out)
-         real(8), intent(inout) :: y(5)
+      subroutine integrate_isobaric(y, t0, t_end, msg_out, n)
+         integer, intent(in) :: n
+         real(8), intent(inout), dimension(n) :: y
          real(8), intent(in) :: t_end, t0
          character(len=100), optional :: msg_out
 
@@ -126,8 +129,9 @@ module microphysics_integration
       pure function dydt_isobaric(t, y) result(dydt)
          use microphysics_common, only: cp_mixture
 
-         real(8), intent(in) :: t, y(5)
-         real(8) :: c_m, dydt(5)
+         real(8), intent(in) :: t
+         real(8), intent(in), dimension(:) :: y
+         real(8) :: c_m, dydt(size(y))
 
          c_m = cp_mixture(y)
 
@@ -138,30 +142,31 @@ module microphysics_integration
       !guarantee self-consistency of new state `y_new`
       ! TODO: Implement mass-scaling
       pure function increment_state_isobaric(y, dy) result(y_new)
-         real(8), intent(in) :: y(5), dy(5)
-         real(8) :: y_new(5)
+         real(8), intent(in), dimension(:) :: y, dy
+         real(8), dimension(size(y)) :: y_new
 
          y_new = y + dy
       end function increment_state_isobaric
       !!!!!!!!!!! end isobaric
 
       subroutine integrate_with_message(dydt_f, y, fix_y, t0, t_end, msg, m_total)
-         real(8), intent(inout) :: y(5)
+         real(8), intent(inout), dimension(:) :: y
          real(8), intent(in) :: t_end, t0
          real(8) :: dt_s, t  ! sub-step timestep
          integer, intent(out) :: m_total
 
          interface
             function dydt_f(x, y)
-               real(8), intent(in) :: x, y(5)
-               real(8) :: dydt_f(5)
+               real(8), intent(in) :: x
+               real(8), dimension(:), intent(in) :: y
+               real(8), dimension(size(y)) :: dydt_f
             end function
          end interface
 
          interface
             function fix_y(y_old, dy)
-               real(8), intent(in) :: y_old(5), dy(5)
-               real(8) :: fix_y(5)
+               real(8), dimension(:), intent(in) :: y_old, dy
+               real(8), dimension(size(dy)) :: fix_y
             end function
          end interface
 
@@ -212,7 +217,8 @@ module microphysics_integration
          use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain
          use microphysics_constants, only: R_v, R_d, rho_l => rho_w
 
-         real(8), intent(in) :: y(5), rho
+         real(8), intent(in) :: rho
+         real(8), intent(in), dimension(:) :: y
 
          real(8) :: temp, qd, qv, ql, qr
          real(8) :: p
@@ -234,7 +240,7 @@ module microphysics_integration
          use microphysics_register, only: idx_temp, idx_pressure
          use microphysics_constants, only: R_v, R_d, rho_l => rho_w
 
-         real(8), intent(in) :: y(5)
+         real(8), intent(in), dimension(:) :: y
 
          real(8) :: temp, p, qd, qv, ql, qr
          real(8) :: rho
@@ -252,23 +258,24 @@ module microphysics_integration
 
 
       recursive subroutine rkf34_original(dydx, y, fix_y, x, dx, msg, m)
-         integer, parameter :: n = 5
          character(len=100), intent(out) :: msg
-         real(8), intent(inout) :: y(n), dx
+         real(8), intent(inout) :: dx
+         real(8), intent(inout), dimension(:) :: y
          real(8), intent(inout) :: x
          integer, intent(in) :: m
 
          interface
             function dydx(x, y)
-               real(8), intent(in) :: x, y(5)
-               real(8) :: dydx(5)
+               real(8), intent(in) :: x
+               real(8), dimension(:), intent(in) :: y
+               real(8), dimension(size(y)) :: dydx
             end function
          end interface
 
          interface
             function fix_y(y_old, dy)
-               real(8), intent(in) :: y_old(5), dy(5)
-               real(8) :: fix_y(5)
+               real(8), dimension(:), intent(in) :: y_old, dy
+               real(8), dimension(size(dy)) :: fix_y
             end function
          end interface
 
@@ -296,13 +303,12 @@ module microphysics_integration
             c1_1=0.0, c2_1=0.0,  c3_1=0.0,  c4_1=0.0,  c5_1=1.,&
             c1_2=1./6., c2_2=1./3.,    c3_2=1./3.,     c4_2=0.,   c5_2=1./6.
 
-         real(8) :: k1(n), k2(n), k3(n), k4(n), k5(n)
-         real(8) :: abs_err(n), y_n1(n), y_n2(n), s, rel_err(n)
-         real(8) :: dydx0(n), max_total_err(n)
+         real(8), dimension(size(y)) :: k1, k2, k3, k4, k5
+         real(8), dimension(size(y)) :: abs_err, y_n1, y_n2, rel_err
+         real(8), dimension(size(y)) :: dydx0, max_total_err
+         real(8) :: s
 
          logical :: done = .false.
-
-         integer :: l
 
          if (debug) then
             print *, ""

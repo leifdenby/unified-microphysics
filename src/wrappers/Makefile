@@ -16,7 +16,11 @@ FFLAGS :=-g -O0 -fPIC
 FC?=ifort
 
 IFLAGS:=-I../base -I../integrators
-FCOMPILER=intelem
+ifeq ($(FC),mpif90)
+	FCOMPILER=intelem
+else ifeq ($(FC),gfortran)
+	FCOMPILER=gfortran
+endif
 
 unified_microphysics_fortran.so: microphysics_pylib.F90 $(models) $(base_src)
 	#f2py -c -m unified_microphysics microphysics_constants.F90 microphysics_common.F90 microphysics_register.F90  #microphysics_initialisation.o $(objects)
