@@ -38,11 +38,12 @@ contains
       use microphysics_constants, only: kreal
 
       integer, intent(in) :: n_variables
-      real(kreal), intent(in) :: t, t_end, y(n_variables)
+      real(kreal), intent(in) :: t, t_end
+      real(kreal), intent(inout) :: y(n_variables)
       character(len=100), intent(out) :: error_mesg
       !f2py raise_python_exception error_mesg
 
-      call integrate(y, t, t_end, error_mesg, n_variables)
+      call integrate(y, t, t_end, error_mesg)
    end subroutine
 
    function init_called()

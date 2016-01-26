@@ -3,7 +3,9 @@ module microphysics_initialisation
    use microphysics_register, only: reset_register => reset
    use microphysics_register, only: model_constraint, MODEL_CONSTRAINT_ISOBARIC, MODEL_CONSTRAINT_ISOMETRIC
 
-   use microphysics_integration, only: integrate, integrate_isometric, integrate_isobaric
+   use microphysics_integration, only: integrate_with_constraint
+   use isobaric_integration_helpers, only: integrate_isobaric
+   use isometric_integration_helpers, only: integrate_isometric
 
    implicit none
 
@@ -44,12 +46,12 @@ contains
       endif
 
       if (trim(system_constraint) == 'isobaric') then
-         print *, "integrated with isobaric constraint"
-         integrate => integrate_isobaric
+         print *, "integrating with isobaric constraint"
+         integrate_with_constraint => integrate_isobaric
          model_constraint = MODEL_CONSTRAINT_ISOBARIC
       else if (trim(system_constraint) == 'isometric') then
-         print *, "integrated with isometric constraint"
-         integrate => integrate_isometric
+         print *, "integrating with isometric constraint"
+         integrate_with_constraint => integrate_isometric
          model_constraint = MODEL_CONSTRAINT_ISOMETRIC
       else
          msg = "Error `system_constraint` must be either `isobaric` or `isometric`"
