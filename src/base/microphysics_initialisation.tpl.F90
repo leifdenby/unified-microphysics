@@ -35,7 +35,7 @@ contains
       call register_variable('temperature')
       call register_variable('pressure')
 
-      print *, "Microphysics init"
+      print *, "Microphysics init (", trim(configuration), ")"
 
       if (configuration == '') then
          print *, "Please choose a microphysics model to use. The available models are:"

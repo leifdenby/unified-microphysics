@@ -4,25 +4,29 @@
 module mphys_no_ice
    use microphysics_register, only: register_variable
    use microphysics_constants, only: kreal, nan
+   use microphysics_register, only: n_variables
 
    implicit none
-   integer, parameter :: n_species = 2
 
    public init, rho_f, dqr_dt__autoconversion
 
+   logical, parameter :: disable_rain = .true.
+
    contains
    subroutine init()
-      ! register_variable(name, n_moments)
-      print *, "no ice init"
       call register_variable('cloud_water', 1)
       call register_variable('rain', 1)
+      if (disable_rain) then
+         print *, "Note: rain (autoconversion) disabled"
+      else
+         print *, "Note: rain (autoconversion) enabled"
+      endif
    end subroutine
 
    pure function dydt(t, y, c_m)
       use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain, idx_temp, idx_pressure
       use microphysics_constants, only: L_v => L_cond
 
-      integer, parameter :: n_variables = 5
       real(kreal), dimension(n_variables), intent(in) :: y
       real(kreal), intent(in) :: t, c_m
       real(kreal) :: dydt(n_variables)
@@ -53,7 +57,11 @@ module mphys_no_ice
       rho_g = rho_f(qd, qv, 0.0_kreal, 0.0_kreal, pressure, temp)
 
       ! compute time derivatives for each process
-      dqrdt_autoconv = 0._kreal*dqr_dt__autoconversion(ql, qg, rho_g)
+      dqrdt_autoconv = dqr_dt__autoconversion(ql, qg, rho_g)
+      if (disable_rain) then
+         dqrdt_autoconv = 0.0
+      endif
+      
       dqrdt_accre    = dqr_dt__accretion(ql, qg, rho_g, qr)
       dqldt_condevap = dql_dt__condensation_evaporation(rho, rho_g, qv, ql, temp, pressure)
 
