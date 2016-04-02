@@ -27,6 +27,9 @@ module mphys_no_ice
       use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain, idx_temp, idx_pressure
       use microphysics_constants, only: L_v => L_cond
 
+      ! XXX: required for f2py compilation, but fixes the number of vars...
+      integer, parameter :: n_variables = 5
+
       real(kreal), dimension(n_variables), intent(in) :: y
       real(kreal), intent(in) :: t, c_m
       real(kreal) :: dydt(n_variables)
