@@ -42,7 +42,7 @@ module mphys_kessler_old
          real(kreal) :: q_v, q_l, q_r, q_i, q_gr
          ! state variable names used in ATHAM
          real(kreal) :: wetnew, watcnew, watpnew, icenew, granew
-         real(kreal) :: wet_flx, watc_flx, watp_flx, ice_flx, gra_flx
+         real(kreal) :: wet_flx, watc_flx, watp_flx, ice_flx, gra_flx, pflx
          real(kreal) :: drynew, tempflx
          real(kreal) :: densair
          real(kreal) :: dt = 0.0
@@ -70,11 +70,12 @@ module mphys_kessler_old
 
          call kessler_processes(p,temp, dt, &
             wetnew, watcnew, watpnew, icenew, granew, &
-            wet_flx, watc_flx, watp_flx, ice_flx, gra_flx, tempflx)
+            wet_flx, watc_flx, watp_flx, ice_flx, gra_flx, tempflx, pflx)
 
          !print *, "-----"
 
          y(idx_temp) = temp + tempflx
+         y(idx_pressure) = p + pflx
          y(idx_water_vapour) = wetnew + wet_flx
          y(idx_cwater) = watcnew + watc_flx
          y(idx_rain) = watpnew + watp_flx
@@ -88,13 +89,13 @@ module mphys_kessler_old
 
       subroutine kessler_processes(p,temp, dt, &
             wetnew, watcnew, watpnew, icenew, granew, &
-            wet_flx, watc_flx, watp_flx, ice_flx, gra_flx, tempflx)
+            wet_flx, watc_flx, watp_flx, ice_flx, gra_flx, tempflx, pflx)
 
          real(kreal), intent(inout) :: temp
          real(kreal), intent(in) :: p !< Pressure [Pa]
          real(kreal), intent(in) :: dt
          real(kreal), intent(in) :: wetnew, watcnew, watpnew, icenew, granew
-         real(kreal), intent(out) :: wet_flx, watc_flx, ice_flx, watp_flx, gra_flx, tempflx
+         real(kreal), intent(out) :: wet_flx, watc_flx, ice_flx, watp_flx, gra_flx, tempflx, pflx
 
          real(kreal), parameter ::                  &
             r0=0._kreal,                          &
@@ -204,13 +205,13 @@ module mphys_kessler_old
 
          ! Variable names used in ATHAM
          real(kreal) :: rgasnew
-         real(kreal) :: densair
+         real(kreal) :: densair, density
          real(kreal) :: dtemp
          real(kreal) :: cptot
          real(kreal) :: sumpos, sumneg, dflux, dmair, dvair
 
          ! local variables to easy variable ATHAM variable calculation
-         real(kreal) :: cp_g, cv_g, cp_m
+         real(kreal) :: cp_g, cv_g, cp_m, gamma
 
          drynew = 1.0 - wetnew - watcnew - watpnew - icenew - granew
 
@@ -226,6 +227,7 @@ module mphys_kessler_old
          cptot = cp_m
 
          densair = p/(rgasnew*temp)
+         density = (drynew*rgasair + wetnew*rgashum)*temp/p + (watcnew+watpnew)/rhowat + icenew/rhoice + granew/rhogra
 
 
          !----------------------------------------------------------------!
@@ -679,12 +681,12 @@ module mphys_kessler_old
             +min(dflux,r0)*min(r0,gra_flx)/sumneg
 
          ! TODO: work out what to do with the pressure correction calculated here
-         !dmair=wet_flx/gasnew
-         !dvair=((watc_flx+watp_flx)/rhowat+ice_flx/rhoice+gra_flx/rhogra) &
-         !*density*density*gasnew/densair
-         !gamma=cp/(cp-rgasnew)
-         !pflx=pflx+gamma*(p0(k)+pnew)*(dmair+dvair)
-         !!$               pflx=pflx+gamma*(p0(k)+pnew)*(dtemp/tetnew+dmair+dvair)
+         dmair=wet_flx/gasnew
+         dvair=((watc_flx+watp_flx)/rhowat+ice_flx/rhoice+gra_flx/rhogra) &
+         *density*density*gasnew/densair
+         gamma=cp/(cp-rgasnew)
+         pflx=pflx+gamma*p*(dmair+dvair)
+         !$               pflx=pflx+gamma*(p0(k)+pnew)*(dtemp/tetnew+dmair+dvair)
 
       end subroutine kessler_processes
 
