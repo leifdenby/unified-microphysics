@@ -68,7 +68,11 @@ def multistep_integration(F0, t, with_debug=False):
 
     n_steps = 0
     for tn in range(len(t)-1):
+        # XXX: if the code crashes here then it's probably because the number
+        # of variables in the fortran microphysics module is wrong, f2py needs
+        # this number to be correct
         # modifies `y` in-place
+
         um_fortran.microphysics_pylib.integrate_microphysics(y=y, t=t[tn], t_end=t[tn+1])
         # TODO: re-implement getting out the total number of steps
         # n_steps += m_total
