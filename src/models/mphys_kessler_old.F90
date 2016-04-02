@@ -1,5 +1,5 @@
-!> Dummy microphysics implementation which displays which functions must be
-!> implemented
+!> Almost verbatim reproduction of original "Kessler microphysics" from ATHAM,
+!> previously found in `source/processModules/kessler_microphysics.F90`
 
 module mphys_kessler_old
 
