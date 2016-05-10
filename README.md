@@ -2,7 +2,13 @@ _Aim_: microphysics module written in Fortran which can be compiled stand-alone 
 
 # Preliminary spec
 
-The microphysics framework consists of a number of components:
+Internally the state-vector `y` represents all the scalar fields relevant to a
+specific microphysics model in a single computational volume. Given the initial
+state `y0` at a time `t0` it is the aim of the microphysics framework to
+calculate the new state at time `t1` later. This integration can either be
+performed isobarically or isometrically.
+
+The microphysics framework consists of the following components:
 
 1. A number of microphysics "models" which each serve to calculate the time
    derivative of the state variable (dQ/dt). These are in [src/models/](src/models/)
@@ -26,7 +32,7 @@ as an external library within a Fortran90 program or as a module from Python.
 
 1. Compile (set compiler with `FC` environment variable)
 
-    FC=ifort make
+        FC=ifort make
 
 2. Write wrapper to initiate the microphysics module and to call the
    integration in every timestep of the host model. See the ATHAM wrapper in
@@ -34,18 +40,18 @@ as an external library within a Fortran90 program or as a module from Python.
 
 3. When compiling use header files in `include/` and link against library in `lib/`, i.e.
 
-    export UM_PATH=/home/lcd33/git-repos/unified-microphysics
-    ifort external_program.f90 -I$UM_PATH/include -L$UM_PATH/lib -lunified_microphysics
+        export UM_PATH=/home/lcd33/git-repos/unified-microphysics
+        ifort external_program.f90 -I$UM_PATH/include -L$UM_PATH/lib -lunified_microphysics
 
 ## From Python
 
 1. Compile Python wrapper
     
-    FC=ifort make python
+        FC=ifort make python
 
 2. Add `pylib/` to `$PYTHONPATH` environment variable, e.g.
 
-    export PYTHONPATH=$PYTHONPATH:/home/lcd33/git-repos/unified-microphysics/pylib
+        export PYTHONPATH=$PYTHONPATH:/home/lcd33/git-repos/unified-microphysics/pylib
 
 3. Import `unified_microphysics` module in python and use. All tests are
    currently written in Python so these (in
@@ -58,7 +64,7 @@ All tests are currently written in Python and require `py.test` to run so this
 will first need installing (eg with `pip install pytest`) and then tests can be
 run with
 
-    FC=ifort make tests
+        FC=ifort make tests
 
 
 # Resources
