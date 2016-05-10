@@ -1,5 +1,4 @@
-!> Dummy microphysics implementation which displays which functions must be
-!> implemented
+!> Near-verbatim reproduction of old "Kessler" microphysics code from ATHAM
 
 module mphys_kessler_old
 
