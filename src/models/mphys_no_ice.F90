@@ -1,9 +1,9 @@
 !> Simple microphysics implementation which only supports the creation of cloud
-!> water from water vapour, no rain or ice-phases are included.
+!> water from water vapour, no ice-phases are included.
 
 module mphys_no_ice
    use microphysics_register, only: register_variable
-   use microphysics_constants, only: kreal, nan
+   use microphysics_constants, only: kreal
    use microphysics_register, only: n_variables
 
    implicit none
