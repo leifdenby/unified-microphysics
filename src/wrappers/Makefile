@@ -18,6 +18,8 @@ FC?=ifort
 IFLAGS:=-I../base -I../integrators
 ifeq ($(FC),mpif90)
 	FCOMPILER=intelem
+else ifeq ($(FC),ifort)
+	FCOMPILER=intelem
 else ifeq ($(FC),gfortran)
 	FCOMPILER=gfortran
 endif
@@ -28,7 +30,7 @@ unified_microphysics_fortran.so: microphysics_pylib.F90 $(models) $(base_src)
 
 	# TODO: Can't import `calc_dqdt` right now because the compilation requires the number of hydrometeors set, maybe we can define a constant somewhere?
 	#f2py -L../base -lunified_microphysics -I../base --no-lower -c -m unified_microphysics_fortran $(base_src) $(models) microphysics_pylib.F90 skip: cv_mixture cp_mixture array_append_real array_append_int calc_dqdt f advance :
-	f2py --fcompiler=$(FCOMPILER) -L../base -lunified_microphysics $(IFLAGS) --no-lower -c -m unified_microphysics_fortran $(base_src) $(models) microphysics_pylib.F90 skip: integrate cv_mixture cp_mixture cp_gas cv_gas array_append_real array_append_int calc_dqdt f advance rkf34_original :
+	f2py --fcompiler=$(FCOMPILER) -L../base -lunified_microphysics $(IFLAGS) --no-lower -c -m unified_microphysics_fortran $(base_src) $(models) microphysics_pylib.F90 skip: integrate cv_mixture cp_mixture cp_gas cv_gas array_append_real array_append_int calc_dqdt f advance rkf34_original dydt :
 	cp unified_microphysics_fortran.so ../../pylib/unified_microphysics/
 
 python: unified_microphysics_fortran.so

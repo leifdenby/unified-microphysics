@@ -197,7 +197,7 @@ module microphysics_integration
                print *, "integration failed"
                print *, mpi_rank, ":", y0
                print *, msg
-               stop(0)
+               call exit(-2)
             endif
          endif
       end subroutine integrate

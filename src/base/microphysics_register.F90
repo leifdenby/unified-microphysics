@@ -108,7 +108,7 @@ contains
          is_spec_conc = 0
       else
          print *, "Registration methods not implemented for species ", trim(var_name)
-         stop(0)
+         call exit(-1)
       endif
 
       call array_append_real(cp_species, cp)
