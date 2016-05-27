@@ -700,6 +700,6 @@ module mphys_kessler_old
          real(8), dimension(n_species) :: dydt
 
          print *, "Not implemented"
-         stop(0)
+         call exit(-1)
       end function
    end module 
