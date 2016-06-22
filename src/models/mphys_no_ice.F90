@@ -1,5 +1,6 @@
 !> Simple microphysics implementation which only supports the creation of cloud
-!> water from water vapour, no ice-phases are included.
+!> water from water vapour and rain-droplets through auto-conversion and
+!> accretion, no ice-phases are included.
 
 module mphys_no_ice
    use microphysics_register, only: register_variable
@@ -10,17 +11,12 @@ module mphys_no_ice
 
    public init, rho_f, dqr_dt__autoconversion
 
-   logical, parameter :: disable_rain = .true.
-
    contains
-   subroutine init()
+   subroutine init(p_disable_rain)
+      logical, optional :: p_disable_rain
+
       call register_variable('cloud_water', 1)
       call register_variable('rain', 1)
-      if (disable_rain) then
-         print *, "Note: rain (autoconversion) disabled"
-      else
-         print *, "Note: rain (autoconversion) enabled"
-      endif
    end subroutine
 
    pure function dydt(t, y, c_m)
@@ -53,20 +49,14 @@ module mphys_no_ice
       qd = 1.0_kreal - ql - qr - qv
       qg = qv + qd
 
-      !print *, "dydt => qv ql qr T", qv, ql, qr, temp
-
       ! compute gas and mixture density using equation of state
       rho = rho_f(qd, qv, ql, qr, pressure, temp)
       rho_g = rho_f(qd, qv, 0.0_kreal, 0.0_kreal, pressure, temp)
 
       ! compute time derivatives for each process
       dqrdt_autoconv = dqr_dt__autoconversion(ql, qg, rho_g)
-      if (disable_rain) then
-         dqrdt_autoconv = 0.0
-      endif
-      
       dqrdt_accre    = dqr_dt__accretion(ql, qg, rho_g, qr)
-      dqldt_condevap = dql_dt__condensation_evaporation(rho, rho_g, qv, ql, temp, pressure)
+      dqldt_condevap = dql_dt__condensation_evaporation(rho=rho, rho_g=rho_g, qv=qv, ql=ql, T=temp, p=pressure)
 
       ! combine to create time derivatives for species
       dydt(idx_water_vapour) = -dqldt_condevap
@@ -74,8 +64,6 @@ module mphys_no_ice
       dydt(idx_rain)         =                   dqrdt_autoconv + dqrdt_accre
 
       dydt(idx_temp) = L_v/c_m*dqldt_condevap
-
-      !print *, "qv/ ql/ qr/ T/", dydt(idx_water_vapour), dydt(idx_cwater), dydt(idx_rain), dydt(idx_temp)
 
    end function
 
@@ -97,7 +85,7 @@ module mphys_no_ice
 
       real(kreal), parameter :: k_c = 1.0e-3, a_c = 5.0e-4
 
-      ! TODO: what happens if qg < 0.0 ?
+      ! TODO: what happens if ql < qg ?
       dqr_dt__autoconversion = k_c*(ql - qg/rho_g*a_c)
       dqr_dt__autoconversion = max(0.0, dqr_dt__autoconversion)
    end function dqr_dt__autoconversion
@@ -122,6 +110,7 @@ module mphys_no_ice
       dqr_dt__accretion = max(0.0, dqr_dt__accretion)
    end function dqr_dt__accretion
 
+   !> Condesation/evaporation of cloud-water droplets
    pure function dql_dt__condensation_evaporation(rho, rho_g, qv, ql, T, p)
       use microphysics_common, only: pv_sat_f => saturation_vapour_pressure
       use microphysics_common, only: qv_sat_f => saturation_vapour_concentration
@@ -134,7 +123,6 @@ module mphys_no_ice
       real(kreal) :: dql_dt__condensation_evaporation
 
       real(kreal), parameter :: r0 = 0.1e-6_kreal  ! initial cloud droplet radius
-      real(kreal), parameter :: r_crit = 5.0e-6_kreal ! critical radius after which cloud-droplet number is increased
       real(kreal), parameter :: N0 = 200*1.0e6_kreal  ! initial cloud droplet number
 
       real(kreal) :: r_c, Nc
@@ -150,25 +138,20 @@ module mphys_no_ice
       qv_sat = qv_sat_f(T, p)
       Sw = qv/qv_sat
 
-      if (ql == 0.0 .and. Sw > 1.0) then
-         ! TODO: Is this reasonable? The issue here is that we might try and
-         ! evaporate droplets which aren't there
-         ! TODO: This also fixes issue when ql < 0.0 which would lead to nan r_c
-         ! the cube root below
-         r_c = r0
+      r_c = (ql*rho/(r4_3*pi*N0*rho_l))**r1_3
+
+      if (Sw < 1.0) then
+         if (r_c < r0) then
+            ! don't allow evaporation if the droplets are smaller than the
+            ! aerosol, there's nothing to evaporate then(!)
+            r_c = 0.0
+         else
+         endif
       else
-         r_c = (ql*rho/(r4_3*pi*N0*rho_l))**r1_3
+         r_c = max(r_c, r0)
       endif
 
-      if (r_c > r_crit) then
-         ! if cloud droplet radius with initial number of droplets is larger
-         ! than a critial size assume that instead more droplets are made,
-         ! all with the critical radius
-         Nc = ql*rho/(r4_3*pi*rho_l*r_crit**3.0_kreal)
-         r_c = r_crit
-      else
-         Nc = N0
-      endif
+      Nc = N0
 
       ! condensation evaporation of cloud droplets (given number of droplets
       ! and droplet radius calculated above)
@@ -180,11 +163,7 @@ module mphys_no_ice
       Fd = R_v*T/(pv_sat*Dv)
 
       ! compute rate of change of condensate from diffusion
-      dql_dt__condensation_evaporation = 4.*pi*1./rho*Nc*r_c*(Sw - 1.0)/(Fk + Fd)
+      dql_dt__condensation_evaporation = 4.*pi*rho_l/rho*Nc*r_c*(Sw - 1.0)/(Fk + Fd)
 
-      !if (isnan(dql_dt__condensation_evaporation)) then
-         !print *, "r_c, Nc, Fk, Fd, Sw", r_c, Nc, Fk, Fd, Sw
-         !stop(0)
-      !endif
    end function dql_dt__condensation_evaporation
 end module mphys_no_ice
