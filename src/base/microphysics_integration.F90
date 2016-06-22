@@ -74,7 +74,11 @@ module isometric_integration_helpers
          temp = y(idx_temp)
 
          ql = y(idx_cwater)
-         qr = y(idx_rain)
+         if (idx_rain /= 0) then
+            qr = y(idx_rain)
+         else
+            qr = 0.
+         endif
          qv = y(idx_water_vapour)
          qd = 1.0 - ql - qr - qv
 
@@ -99,7 +103,11 @@ module isometric_integration_helpers
          temp = y(idx_temp)
 
          ql = y(idx_cwater)
-         qr = y(idx_rain)
+         if (idx_rain /= 0) then
+            qr = y(idx_rain)
+         else
+            qr = 0.
+         endif
          qv = y(idx_water_vapour)
          qd = 1.0 - ql - qr - qv
 
