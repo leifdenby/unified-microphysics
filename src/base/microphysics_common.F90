@@ -21,8 +21,8 @@ module microphysics_common
          real(kreal) :: water_vapour_diffusivity
          real(kreal), intent(in) :: temp, pressure
 
-         ! The tabulated values are in reference to P=10000. Pa
-         water_vapour_diffusivity=a_D*(temp/T0)**b_D*10000./(pressure)
+         ! The tabulated values are in reference to P=100kPa=100000Pa
+         water_vapour_diffusivity=a_D*(temp/T0)**b_D*100000./(pressure)
       end function water_vapour_diffusivity
 
       pure function saturation_vapour_pressure(temp)
