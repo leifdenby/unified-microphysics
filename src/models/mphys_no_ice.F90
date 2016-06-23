@@ -157,10 +157,10 @@ module mphys_no_ice
       ! and droplet radius calculated above)
 
       Ka = Ka_f(T)
-      Fk = (Lv/(R_v*T) - 1._kreal) * (Lv/(Ka*T))
+      Fk = (Lv/(R_v*T) - 1._kreal) * (Lv/(Ka*T))*rho_l
 
       Dv = Dv_f(T, p)
-      Fd = R_v*T/(pv_sat*Dv)
+      Fd = R_v*T/(pv_sat*Dv)*rho_l
 
       ! compute rate of change of condensate from diffusion
       dql_dt__condensation_evaporation = 4.*pi*rho_l/rho*Nc*r_c*(Sw - 1.0)/(Fk + Fd)
