@@ -23,16 +23,13 @@ module mphys_no_ice
       use microphysics_register, only: idx_cwater, idx_water_vapour, idx_rain, idx_temp, idx_pressure
       use microphysics_constants, only: L_v => L_cond
 
-      ! XXX: required for f2py compilation, but fixes the number of vars...
-      integer, parameter :: n_variables = 5
-
       real(kreal), dimension(:), intent(in) :: y
       real(kreal), intent(in) :: t, c_m
       real(kreal) :: dydt(size(y))
 
       real(kreal) :: ql, qv, qg, qr, qd
       real(kreal) :: rho, rho_g
-      real(kreal) :: dqrdt_autoconv, dqrdt_accre, dqldt_condevap
+      real(kreal) :: dqrdt_autoconv, dqrdt_accre, dqrdt_condevap, dqldt_condevap
       real(kreal) :: temp, pressure
 
       ! OBS: it's important to make sure that return variable is initiated to
@@ -56,12 +53,13 @@ module mphys_no_ice
       ! compute time derivatives for each process
       dqrdt_autoconv = dqr_dt__autoconversion(ql, qg, rho_g)
       dqrdt_accre    = dqr_dt__accretion(ql, qg, rho_g, qr)
+      dqldt_condevap = dqr_dt__condensation_evaporation(qv=qv, qr=qr, rho=rho, T=temp, p=pressure)
       dqldt_condevap = dql_dt__condensation_evaporation(rho=rho, rho_g=rho_g, qv=qv, ql=ql, T=temp, p=pressure)
 
       ! combine to create time derivatives for species
-      dydt(idx_water_vapour) = -dqldt_condevap
+      dydt(idx_water_vapour) = -dqldt_condevap                                - dqrdt_condevap
       dydt(idx_cwater)       =  dqldt_condevap - dqrdt_autoconv - dqrdt_accre
-      dydt(idx_rain)         =                   dqrdt_autoconv + dqrdt_accre
+      dydt(idx_rain)         =                   dqrdt_autoconv + dqrdt_accre + dqrdt_condevap
 
       dydt(idx_temp) = L_v/c_m*dqldt_condevap
 
@@ -166,4 +164,67 @@ module mphys_no_ice
       dql_dt__condensation_evaporation = 4.*pi*rho_l/rho*Nc*r_c*(Sw - 1.0)/(Fk + Fd)
 
    end function dql_dt__condensation_evaporation
+
+   !> Condensation and evaporation of rain. Similar to cloud-water droplet
+   !> condensation/evaporation but includes corrections for "ventilation" and
+   !> and droplet-size is assumed to follow a Marshall-Palmer distribution:
+   !>
+   !>     N(r)dr = N0 exp(-l*r) dr
+   pure function dqr_dt__condensation_evaporation(qv, qr, rho, T, p)
+      use microphysics_common, only: pv_sat_f => saturation_vapour_pressure
+      use microphysics_common, only: qv_sat_f => saturation_vapour_concentration
+      use microphysics_common, only: Ka_f => thermal_conductivity
+      use microphysics_common, only: Dv_f => water_vapour_diffusivity
+      use microphysics_common, only: dyn_visc_f => dynamic_viscosity
+      use microphysics_constants, only: Lv => L_cond, R_v
+      use microphysics_constants, only: pi, rho_l => rho_w
+
+      real(kreal), intent(in) :: qv, qr, rho, T, p
+      real(kreal) :: dqr_dt__condensation_evaporation
+
+      real(kreal), parameter :: G2p75 = 1.608359421985546_kreal ! = Gamma(2.75)
+        
+      ! droplet-size distribution constant
+      real(kreal), parameter :: N0 = 1.0e7 ! [m^-4]
+
+      ! fall-speed coefficient taken from the r > 0.5mm expression for
+      ! fall-speed from Herzog '98
+      real(kreal), parameter :: a_r = 201.
+      ! reference density
+      real(kreal), parameter :: rho0 = 1.12
+
+      real(kreal) :: pv_sat, qv_sat, Sw, l
+      real(kreal) :: Dv, Fd
+      real(kreal) :: Ka, Fk
+      real(kreal) :: mu, f
+
+      ! can't do cond/evap without any rain-droplets present
+      if (qr == 0.0) then
+         dqr_dt__condensation_evaporation = 0.0_kreal
+      else
+         ! computer super/sub-saturation
+         qv_sat = qv_sat_f(T, p)
+         Sw = qv/qv_sat
+
+         ! size-distribtion length-scale
+         l = (8.*rho_l*pi*N0/(qr*rho))**.25
+
+         ! air condutivity and diffusion effects
+         Ka = Ka_f(T)
+         Fk = (Lv/(R_v*T) - 1)*Lv/(Ka*T)*rho_l
+
+         pv_sat = pv_sat_f(T)
+         Dv = Dv_f(T, p)
+         Fd = R_v*T/(pv_sat*Dv)*rho_l
+
+         ! compute the ventilation coefficient `f`
+         ! dynamic viscosity
+         mu = dyn_visc_f(T=T)
+
+         f = 1. + 0.22*(2.*a_r*rho/mu)**.5*(rho0/rho)**.25*G2p75/(l**.25)
+
+         ! compute rate of change of condensate from diffusion
+         dqr_dt__condensation_evaporation = 4*pi*rho_l/rho*N0/l**2.*(Sw - 1.0)/(Fk + Fd)*f
+      endif
+   end function
 end module mphys_no_ice

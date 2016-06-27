@@ -54,6 +54,19 @@ module microphysics_common
          saturation_vapour_concentration = (eps*pv_sat)/(p-(1.-eps)*pv_sat)
       end function saturation_vapour_concentration
 
+      !> Calculate dynamic viscosity using parameterisation from Rogers & Yau
+      !> 1989
+      pure function dynamic_viscosity(T)
+         use microphysics_constants, only: T0
+
+         real(kreal), intent(in) :: T
+         real(kreal) :: dynamic_viscosity
+
+         real(kreal), parameter :: r3_2 = 3./2._kreal
+
+         dynamic_viscosity = 1.72e-5_kreal*(393._kreal/(T + 120._kreal))*(T/T0)**r3_2
+      end function dynamic_viscosity
+
       pure function cp_gas(y)
          use microphysics_register, only: n_variables, cp_species, q_species_flag, idx_water_vapour
          use microphysics_constants, only: cp_d, cp_v
