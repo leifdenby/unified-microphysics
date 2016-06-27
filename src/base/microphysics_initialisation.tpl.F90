@@ -2,6 +2,7 @@ module microphysics_initialisation
    use microphysics_register, only: register_variable, n_compressible_species, n_incompressible_species
    use microphysics_register, only: reset_register => reset
    use microphysics_register, only: model_constraint, MODEL_CONSTRAINT_ISOBARIC, MODEL_CONSTRAINT_ISOMETRIC
+   use microphysics_register, only: dydt_registered
 
    use microphysics_integration, only: integrate_with_constraint
    use isobaric_integration_helpers, only: integrate_isobaric

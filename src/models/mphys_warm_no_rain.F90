@@ -28,9 +28,9 @@ module mphys_warm_no_rain
       ! XXX: required for f2py compilation, but fixes the number of vars...
       !integer, parameter :: n_variables = 4
 
-      real(kreal), dimension(n_variables), intent(in) :: y
+      real(kreal), dimension(:), intent(in) :: y
       real(kreal), intent(in) :: t, c_m
-      real(kreal) :: dydt(n_variables)
+      real(kreal) :: dydt(size(y))
 
       real(kreal) :: ql, qv, qg, qr, qd
       real(kreal) :: rho, rho_g

@@ -4,7 +4,8 @@
 
 !> Integration helpers for isometric (constant volume integration)
 module isometric_integration_helpers
-   use mphys_no_ice, only: dydt_mphys => dydt
+   !use mphys_no_ice, only: dydt_mphys => dydt
+   use microphysics_register, only: dydt_mphys => dydt_registered
    use integrators, only: integrate_with_message
 
    implicit none

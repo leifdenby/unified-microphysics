@@ -18,14 +18,15 @@ module mphys_dummy
       call register_variable('graupel', 1)
    end subroutine
 
-   pure function dydt(t, y)
+   pure function dydt(t, y, c_m)
       use microphysics_register, only: idx_cwater, idx_water_vapour
       use microphysics_constants, only: L_cond
       integer, parameter :: n_species = 4
 
       real(kreal), intent(in) :: t
-      real(kreal), dimension(n_species), intent(in) :: y
-      real(kreal), dimension(n_species) :: dydt
+      real(kreal), dimension(:), intent(in) :: y
+      real(kreal), dimension(size(y)) :: dydt
+      real(kreal), intent(in) :: c_m
 
    end function
 end module mphys_dummy

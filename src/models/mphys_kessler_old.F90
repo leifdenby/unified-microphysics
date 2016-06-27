@@ -690,16 +690,12 @@ module mphys_kessler_old
 
       end subroutine kessler_processes
 
-      function dydt(t, y)
-         ! use microphysics_register, only: idx_cwater, idx_water_vapour
-         ! use microphysics_constants, only: L_cond
-         integer, parameter :: n_species = 8
-
+      !> Doesn't do anything, can't print so this is just here to allow
+      !compilation
+      pure function dydt(t, y, c_m)
          real(8), intent(in) :: t
-         real(8), dimension(n_species), intent(in) :: y
-         real(8), dimension(n_species) :: dydt
-
-         print *, "Not implemented"
-         call exit(-1)
+         real(8), dimension(:), intent(in) :: y
+         real(8), dimension(size(y)) :: dydt
+         real(8), intent(in) :: c_m
       end function
    end module 

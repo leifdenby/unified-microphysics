@@ -30,7 +30,7 @@ MODULE_SUBROUTINE_TEMPLATE = """
     subroutine mphys_wrapper_{mphys_name}
         use mphys_{mphys_name}, only: init, dydt 
         call init()
-        ! q_flux_function => dydt
+        dydt_registered => dydt
     end subroutine mphys_wrapper_{mphys_name}
 """
 

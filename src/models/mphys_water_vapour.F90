@@ -9,11 +9,11 @@ module mphys_water_vapour
    subroutine init()
    end subroutine
 
-   pure function dydt(t, y)
-      integer, parameter :: n_variables = 2
+   pure function dydt(t, y, c_m)
       real(kreal), intent(in) :: t
-      real(kreal), dimension(n_variables), intent(in) :: y
-      real(kreal), dimension(n_variables) :: dydt
+      real(kreal), dimension(:), intent(in) :: y
+      real(kreal), dimension(size(y)) :: dydt
+      real(kreal), intent(in) :: c_m
 
    end function
 end module mphys_water_vapour

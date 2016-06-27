@@ -25,7 +25,16 @@ module microphysics_register
    integer :: idx_temp=0, idx_pressure=0
 
    ! pointers to subroutines used in microphysics calculation
-   !procedure(), pointer :: q_flux_function => null()
+   procedure(dydt_f), pointer :: dydt_registered => null()
+
+         interface
+            pure function dydt_f(x, y, c_m)
+               real(8), intent(in) :: x
+               real(8), dimension(:), intent(in) :: y
+               real(8), dimension(size(y)) :: dydt_f
+               real(8), intent(in) :: c_m
+            end function
+         end interface
 
 contains
    subroutine reset()
