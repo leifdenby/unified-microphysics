@@ -170,9 +170,19 @@ module microphysics_integration
 
    implicit none
 
+   interface
+      subroutine constraint_based_integrator(y, t0, t_end, msg_out, m_total, n)
+         integer, intent(in) :: n
+         real(8), intent(inout), dimension(n) :: y
+         real(8), intent(in) :: t_end, t0
+         integer, intent(inout) :: m_total
+         character(len=100), intent(inout), optional :: msg_out
+      end subroutine
+   end interface
+
    !> Will be assigned to one of the "integration helpers" which gaurantee
    !> either isometric or isobaric integration
-   procedure(), pointer :: integrate_with_constraint => null()
+   procedure(constraint_based_integrator), pointer :: integrate_with_constraint => null()
 
    contains
       !> Public subroutine that will be called by ATHAM/python-wrapper etc.
