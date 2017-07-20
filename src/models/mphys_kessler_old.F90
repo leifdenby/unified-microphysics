@@ -697,5 +697,7 @@ module mphys_kessler_old
          real(8), dimension(:), intent(in) :: y
          real(8), dimension(size(y)) :: dydt
          real(8), intent(in) :: c_m
+
+         dydt(:) = 0.0_kreal ! to avoid compilation warnings
       end function
    end module 

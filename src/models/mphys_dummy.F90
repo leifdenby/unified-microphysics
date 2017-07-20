@@ -28,5 +28,7 @@ module mphys_dummy
       real(kreal), dimension(size(y)) :: dydt
       real(kreal), intent(in) :: c_m
 
+      dydt(:) = 0.0_kreal ! to avoid compilation warnings
+
    end function
 end module mphys_dummy
