@@ -101,11 +101,18 @@ module mphys_no_ice
 
       real(kreal) :: lambda_r
 
-      lambda_r = (pi*(qg*rho_l)/(qr*rho_g)*N0r)**(1./4.)
+      ! If there is no rain available to perform accretion there is no need to calculate the accretion rate (also avoids
+      ! divide-by-zero, see https://github.com/leifdenby/unified-microphysics/issues/5)
 
-      dqr_dt__accretion = pi/4.*N0r*a_r*sqrt(rho0/rho_g)*G3p5*lambda_r**(-3.5)*ql
+      if (qr .eq. 0.0) then
+         dqr_dt__accretion = 0.0
+      else
+         lambda_r = (pi*(qg*rho_l)/(qr*rho_g)*N0r)**(1./4.)
 
-      dqr_dt__accretion = max(0.0, dqr_dt__accretion)
+         dqr_dt__accretion = pi/4.*N0r*a_r*sqrt(rho0/rho_g)*G3p5*lambda_r**(-3.5)*ql
+
+         dqr_dt__accretion = max(0.0, dqr_dt__accretion)
+      endif
    end function dqr_dt__accretion
 
    !> Condesation/evaporation of cloud-water droplets
