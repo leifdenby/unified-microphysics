@@ -34,7 +34,7 @@ module mphys_no_ice
 
       ! OBS: it's important to make sure that return variable is initiated to
       ! zero
-      dydt = 0.0
+      dydt = 0.0_kreal
 
       temp = y(idx_temp)
       pressure = y(idx_pressure)
@@ -81,11 +81,11 @@ module mphys_no_ice
       real(kreal), intent(in) :: ql, qg, rho_g
       real(kreal) :: dqr_dt__autoconversion
 
-      real(kreal), parameter :: k_c = 1.0e-3, a_c = 5.0e-4
+      real(kreal), parameter :: k_c = 1.0e-3_kreal, a_c = 5.0e-4_kreal
 
       ! TODO: what happens if ql < qg ?
       dqr_dt__autoconversion = k_c*(ql - qg/rho_g*a_c)
-      dqr_dt__autoconversion = max(0.0, dqr_dt__autoconversion)
+      dqr_dt__autoconversion = max(0.0_kreal, dqr_dt__autoconversion)
    end function dqr_dt__autoconversion
 
    pure function dqr_dt__accretion(ql, qg, rho_g, qr)
@@ -94,22 +94,22 @@ module mphys_no_ice
       real(kreal), intent(in) :: ql, qg, rho_g, qr
       real(kreal) :: dqr_dt__accretion
 
-      real(kreal), parameter :: G3p5 = 3.32399614155  ! = Gamma(3.5)
-      real(kreal), parameter :: N0r = 1.e7  ! [m^-4]
-      real(kreal), parameter :: a_r = 201.0  ! [m^.5 s^-1]
-      real(kreal), parameter :: rho0 = 1.12
+      real(kreal), parameter :: G3p5 = 3.32399614155_kreal  ! = Gamma(3.5)
+      real(kreal), parameter :: N0r = 1.e7_kreal  ! [m^-4]
+      real(kreal), parameter :: a_r = 201.0_kreal  ! [m^.5 s^-1]
+      real(kreal), parameter :: rho0 = 1.12_kreal
 
       real(kreal) :: lambda_r
 
       ! If there is no rain available to perform accretion there is no need to calculate the accretion rate (also avoids
       ! divide-by-zero, see https://github.com/leifdenby/unified-microphysics/issues/5)
 
-      if (qr .eq. 0.0) then
-         dqr_dt__accretion = 0.0
+      if (qr .eq. 0.0_kreal) then
+         dqr_dt__accretion = 0.0_kreal
       else
-         lambda_r = (pi*(qg*rho_l)/(qr*rho_g)*N0r)**(1./4.)
+         lambda_r = (pi*(qg*rho_l)/(qr*rho_g)*N0r)**(0.25_kreal)
 
-         dqr_dt__accretion = pi/4.*N0r*a_r*sqrt(rho0/rho_g)*G3p5*lambda_r**(-3.5)*ql
+         dqr_dt__accretion = pi/4.0_kreal*N0r*a_r*sqrt(rho0/rho_g)*G3p5*lambda_r**(-3.5_kreal)*ql
 
          dqr_dt__accretion = max(0.0, dqr_dt__accretion)
       endif
@@ -145,11 +145,11 @@ module mphys_no_ice
 
       r_c = (ql*rho/(r4_3*pi*N0*rho_l))**r1_3
 
-      if (Sw < 1.0) then
+      if (Sw < 1.0_kreal) then
          if (r_c < r0) then
             ! don't allow evaporation if the droplets are smaller than the
             ! aerosol, there's nothing to evaporate then(!)
-            r_c = 0.0
+            r_c = 0.0_kreal
          else
          endif
       else
@@ -192,13 +192,13 @@ module mphys_no_ice
       real(kreal), parameter :: G2p75 = 1.608359421985546_kreal ! = Gamma(2.75)
         
       ! droplet-size distribution constant
-      real(kreal), parameter :: N0 = 1.0e7 ! [m^-4]
+      real(kreal), parameter :: N0 = 1.0e7_kreal ! [m^-4]
 
       ! fall-speed coefficient taken from the r > 0.5mm expression for
       ! fall-speed from Herzog '98
-      real(kreal), parameter :: a_r = 201.
+      real(kreal), parameter :: a_r = 201._kreal
       ! reference density
-      real(kreal), parameter :: rho0 = 1.12
+      real(kreal), parameter :: rho0 = 1.12_kreal
 
       real(kreal) :: pv_sat, qv_sat, Sw, l
       real(kreal) :: Dv, Fd
@@ -214,11 +214,11 @@ module mphys_no_ice
          Sw = qv/qv_sat
 
          ! size-distribtion length-scale
-         l = (8.*rho_l*pi*N0/(qr*rho))**.25
+         l = (8.0_kreal*rho_l*pi*N0/(qr*rho))**0.25_kreal
 
          ! air condutivity and diffusion effects
          Ka = Ka_f(T)
-         Fk = (Lv/(R_v*T) - 1)*Lv/(Ka*T)*rho_l
+         Fk = (Lv/(R_v*T) - 1.0_kreal)*Lv/(Ka*T)*rho_l
 
          pv_sat = pv_sat_f(T)
          Dv = Dv_f(T, p)
@@ -228,10 +228,10 @@ module mphys_no_ice
          ! dynamic viscosity
          mu = dyn_visc_f(T=T)
 
-         f = 1. + 0.22*(2.*a_r*rho/mu)**.5*(rho0/rho)**.25*G2p75/(l**.25)
+         f = 1.0_kreal + 0.22_kreal*(2.0_kreal*a_r*rho/mu)**0.5_kreal*(rho0/rho)**0.25_kreal*G2p75/(l**0.25_kreal)
 
          ! compute rate of change of condensate from diffusion
-         dqr_dt__condensation_evaporation = 4*pi*rho_l/rho*N0/l**2.*(Sw - 1.0)/(Fk + Fd)*f
+         dqr_dt__condensation_evaporation = 4.0_kreal*pi*rho_l/rho*N0/l**2.0_kreal*(Sw - 1.0_kreal)/(Fk + Fd)*f
       endif
    end function
 end module mphys_no_ice
