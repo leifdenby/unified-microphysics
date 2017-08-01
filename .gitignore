@@ -12,3 +12,4 @@ attic/
 include/
 lib/
 src/odespy
+*.dSYM/
