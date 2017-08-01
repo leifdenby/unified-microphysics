@@ -21,7 +21,7 @@ FFLAGS += -DMPI
 endif
 
 ../integrators/libmicrophysics_integrators.a:
-	$(FC) $(MAKE) -C ../integrators
+	FC=$(FC) $(MAKE) -C ../integrators
 
 microphysics_constants.o: microphysics_constants.F90
 	$(FC) $(FFLAGS) -c microphysics_constants.F90
