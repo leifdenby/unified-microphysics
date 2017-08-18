@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 debug = args.debug
 
-files = glob.glob('../models/mphys_*.F*')
+files = glob.glob('../models/mphys_*.F90')
 mphys_names = [re.match(r'../models/mphys_(?P<mphys_name>.*).F[\d2]', file).group('mphys_name') for file in files]
 
 if debug:
