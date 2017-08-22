@@ -174,8 +174,8 @@ module integrators
 
             ! TODO: There's got to be a better way than this, we want to make
             ! sure we get exactly to zero
-            where (y < 1.0e-40)
-               y = 0.0
+            where (y(:) < tiny(y(1)))
+               y(:) = 0.0
             endwhere 
          endif
 
